@@ -1,0 +1,108 @@
+# OAuthKitchen Sample Configuration
+# Copy this file to oauthkitchen.yaml and edit as needed
+
+# Authentication settings
+# Use ONE of: client_secret, certificate_path, or use_device_code
+auth:
+  tenant_id: "your-tenant-id"
+  client_id: "your-app-client-id"
+
+  # Option 1: Client secret (less secure, simpler)
+  # client_secret: "your-client-secret"
+
+  # Option 2: Certificate (recommended for automation)
+  # certificate_path: "/path/to/cert.pem"
+  # certificate_password: null  # if cert is password-protected
+
+  # Option 3: Device code flow (interactive)
+  use_device_code: false
+
+# Analysis mode
+# - auto: Use full mode if sign-in logs available, otherwise limited
+# - full: Requires AuditLog.Read.All and may need Azure AD P1/P2
+# - limited: Works without sign-in log access
+mode: auto
+
+# Credential expiry thresholds (days)
+# Credentials expiring within these windows will be flagged
+thresholds:
+  credential_expiry_critical: 7
+  credential_expiry_high: 30
+  credential_expiry_medium: 60
+  credential_expiry_low: 90
+
+  # Apps inactive for longer than this will be flagged (when data available)
+  inactive_days_threshold: 90
+
+  # Credentials older than this will be noted for review
+  credential_age_concern: 365
+
+# Risk scoring weights
+# Adjust these to tune the risk scoring algorithm
+scoring:
+  # Permission type multipliers
+  application_permission_multiplier: 1.5  # App permissions are higher risk
+  delegated_permission_multiplier: 1.0
+
+  # Consent type weights
+  user_consent_weight: 1.2  # User consent adds some risk
+  admin_consent_weight: 1.0
+
+  # Publisher/trust weights
+  no_verified_publisher_weight: 1.3
+  external_multi_tenant_weight: 1.2
+  first_party_microsoft_weight: 0.3  # MS apps get reduced risk
+
+  # Ownership weights
+  no_owner_weight: 1.3
+
+  # Activity weights
+  unused_high_privilege_weight: 1.4
+
+  # Permission category base scores (0-100)
+  # These are starting points; individual permissions may override
+  score_tenant_takeover: 100
+  score_privilege_escalation: 85
+  score_data_exfiltration: 70
+  score_persistence: 60
+  score_lateral_movement: 50
+  score_read_only: 20
+  score_unknown: 30
+
+# Output settings
+output:
+  output_directory: "./oauthkitchen-output"
+  formats:
+    - html
+    - md
+    - csv
+  include_json: true
+
+  # IMPORTANT: Remediation suggestions are OFF by default
+  # Enable only if you want actionable recommendations in reports
+  include_remediation_suggestions: false
+
+# Allow/deny lists
+# Use these to customize risk scoring for known apps
+allow_deny:
+  # App IDs to exclude from risk scoring (known safe)
+  allowed_app_ids: []
+  # Example:
+  # allowed_app_ids:
+  #   - "00000000-0000-0000-0000-000000000000"  # Your internal app
+
+  # App IDs to always flag as high risk
+  denied_app_ids: []
+
+  # Publisher domains to trust (reduces risk score)
+  trusted_publisher_domains:
+    - "microsoft.com"
+    - "azure.com"
+
+# Caching
+enable_cache: true
+cache_ttl_seconds: 3600
+
+# Logging
+log_level: INFO
+verbose: false

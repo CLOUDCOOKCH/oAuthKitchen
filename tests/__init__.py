@@ -1,0 +1,1 @@
+"""OAuthKitchen test suite."""
