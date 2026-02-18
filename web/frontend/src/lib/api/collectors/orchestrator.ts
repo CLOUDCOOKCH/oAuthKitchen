@@ -14,7 +14,6 @@ import {
   type AnalysisResult,
   type Application,
   type CredentialExpiryFinding,
-  CredentialType,
   getAllCredentials,
   getDaysUntilExpiry,
 } from '@/types/models'

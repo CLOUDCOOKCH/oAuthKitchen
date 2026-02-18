@@ -102,10 +102,8 @@ export class GraphClient {
     let nextLink: string | undefined = path.startsWith('https://') ? path : `${GRAPH_BASE}${path}`
 
     while (nextLink) {
-      const data = await this._fetch<{ value?: T[]; '@odata.nextLink'?: string }>(
-        nextLink,
-        scopes
-      )
+      const data: { value?: T[]; '@odata.nextLink'?: string } =
+        await this._fetch<{ value?: T[]; '@odata.nextLink'?: string }>(nextLink, scopes)
       for (const item of data.value || []) {
         yield item
       }
