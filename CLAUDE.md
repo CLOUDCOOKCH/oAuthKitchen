@@ -6,15 +6,12 @@ This file provides context for AI assistants working in this repository.
 
 ## Project Overview
 
-**OAuthKitchen** is a security analysis tool for Microsoft Entra ID (Azure AD) OAuth applications. It combines three core capabilities:
+**OAuthKitchen** is a browser-native SPA for Microsoft Entra ID OAuth security analysis. It connects directly to the Microsoft Graph API using MSAL.js — no backend, no server.
 
+Three core capabilities:
 1. **OAuth App Consent Analyzer** — Risk-scored analysis of all OAuth applications in a tenant
-2. **Shadow OAuth Detector** — Identifies risky OAuth exposure patterns (orphaned apps, user-consented dangerous permissions, etc.)
+2. **Shadow OAuth Detector** — Identifies risky OAuth exposure patterns
 3. **OAuth Permission Translator** — Converts raw permission scopes to plain English with abuse context
-
-The project consists of two parts:
-- A **Python CLI tool** (`src/oauthkitchen/`) — the core analysis engine
-- A **Web application** (`web/`) — a React/FastAPI wrapper for ongoing monitoring
 
 ---
 
@@ -22,56 +19,48 @@ The project consists of two parts:
 
 ```
 oAuthKitchen/
-├── src/oauthkitchen/          # Core Python CLI package
-│   ├── __init__.py            # Version: 0.1.0
-│   ├── cli.py                 # CLI entry point (Typer commands)
-│   ├── config.py              # Configuration dataclasses
-│   ├── graph_client.py        # Microsoft Graph API client
-│   ├── models.py              # Core domain models and enums
-│   ├── collectors/            # Data gathering from Graph API
-│   │   ├── base.py
-│   │   ├── orchestrator.py    # Coordinates all collectors
-│   │   ├── applications.py
-│   │   ├── service_principals.py
-│   │   └── permissions.py
-│   ├── analyzers/             # Analysis engines
-│   │   ├── translator.py      # Permission → plain English
-│   │   ├── scoring.py         # Risk score calculation
-│   │   └── shadow.py          # Shadow OAuth pattern detection
-│   ├── reporters/             # Output generators
-│   │   ├── base.py
-│   │   ├── html.py
-│   │   ├── markdown.py
-│   │   ├── csv_export.py
-│   │   └── json_export.py
-│   ├── templates/             # Jinja2 templates
-│   │   ├── report.html
-│   │   └── summary.md
-│   └── utils/
-│       ├── logging.py         # Rich console logging
-│       └── cache.py           # Graph API response cache
+├── web/frontend/                  # The entire application
+│   ├── public/
+│   │   └── permissions.json       # Permission rules data (40+ Graph scopes)
+│   ├── src/
+│   │   ├── types/
+│   │   │   └── models.ts          # All TypeScript domain types and enums
+│   │   ├── lib/
+│   │   │   ├── msalConfig.ts      # Builds MSAL config from user settings
+│   │   │   ├── utils.ts           # cn, formatDate, getRiskColor helpers
+│   │   │   ├── utils/
+│   │   │   │   └── logger.ts      # Structured logger with in-memory store
+│   │   │   ├── store/
+│   │   │   │   ├── settingsStore.ts  # Persisted settings (clientId, tenantId)
+│   │   │   │   ├── scanStore.ts      # Scan results and history
+│   │   │   │   └── index.ts          # Barrel exports
+│   │   │   ├── analyzers/
+│   │   │   │   ├── translator.ts  # Permission → plain English (loads permissions.json)
+│   │   │   │   ├── scoring.ts     # Risk score calculation (0-100)
+│   │   │   │   └── shadow.ts      # Shadow OAuth pattern detection
+│   │   │   └── api/
+│   │   │       ├── graphClient.ts         # MSAL-backed Graph API client
+│   │   │       └── collectors/
+│   │   │           ├── applications.ts    # App registrations collector
+│   │   │           ├── servicePrincipals.ts  # Service principals collector
+│   │   │           └── orchestrator.ts   # Main scan entry point
+│   │   ├── components/
+│   │   │   ├── Layout.tsx         # Nav shell (MSAL user info + logout)
+│   │   │   └── ui/                # Radix UI-based component library
+│   │   ├── pages/
+│   │   │   ├── Login.tsx          # MSAL popup login
+│   │   │   ├── Dashboard.tsx      # Scan summary (charts + history)
+│   │   │   ├── Scans.tsx          # Run scan + progress
+│   │   │   ├── ScanDetail.tsx     # Full results (findings, apps, credentials)
+│   │   │   ├── Permissions.tsx    # Permission translator browser
+│   │   │   ├── Settings.tsx       # MSAL config form + thresholds
+│   │   │   └── Tenants.tsx        # Redirects to /settings
+│   │   ├── App.tsx                # Dynamic MSAL init + routing
+│   │   └── main.tsx               # React entry point
+│   ├── package.json
+│   └── vite.config.ts
 │
-├── tests/                     # Pytest test suite
-│   ├── conftest.py            # Fixtures and sample data factories
-│   ├── test_models.py
-│   ├── test_scoring.py
-│   ├── test_translator.py
-│   └── test_shadow.py
-│
-├── web/
-│   ├── frontend/              # React 18 + TypeScript + Vite
-│   │   └── src/
-│   │       ├── components/    # Radix UI-based component library
-│   │       └── pages/         # 7 page components
-│   └── backend/               # FastAPI + SQLAlchemy
-│       └── app/
-│           ├── main.py
-│           ├── routers/       # Auth, tenants, scans, dashboard, permissions
-│           └── services/
-│               └── scanner.py # Background scan execution
-│
-├── pyproject.toml             # Python project config (build, deps, tools)
-├── oauthkitchen.sample.yaml   # Full configuration reference
+├── .github/workflows/ci.yml       # Frontend-only CI (lint, tsc, build)
 ├── README.md
 └── CONTRIBUTING.md
 ```
@@ -80,113 +69,54 @@ oAuthKitchen/
 
 ## Development Setup
 
-### Python CLI
-
-Requires Python 3.11 or 3.12.
-
-```bash
-python -m venv .venv
-source .venv/bin/activate       # Windows: .venv\Scripts\activate
-pip install -e ".[dev]"         # Installs package + dev dependencies
-```
-
-### Web Frontend
+Node.js 20+ required.
 
 ```bash
 cd web/frontend
 npm install
-npm run dev                     # Dev server at http://localhost:5173
-```
-
-The frontend proxies API requests to `http://localhost:8000`.
-
-### Web Backend
-
-```bash
-cd web/backend
-pip install -r requirements.txt
-uvicorn app.main:app --reload   # API at http://localhost:8000
+npm run dev        # Dev server at http://localhost:5173
 ```
 
 ---
 
 ## Common Commands
 
-### Testing
-
-```bash
-pytest tests/ -v                          # Run all tests with verbose output
-pytest tests/test_scoring.py -v           # Run a single test file
-pytest --cov=oauthkitchen --cov-report=term-missing  # With coverage
-```
-
-Coverage configuration is in `pyproject.toml` under `[tool.pytest.ini_options]`.
-
-### Linting & Formatting
-
-```bash
-ruff check src/ tests/          # Lint
-ruff check src/ tests/ --fix    # Lint and auto-fix
-ruff format src/ tests/         # Format (replaces black + isort)
-```
-
-### Type Checking
-
-```bash
-mypy src/oauthkitchen           # Type check (informational, not blocking)
-```
-
-### Frontend
-
 ```bash
 cd web/frontend
-npm run lint                    # ESLint (zero warnings allowed)
-npm run build                   # TypeScript compile + Vite production build
-npm run preview                 # Preview production build
-```
-
-### CLI Usage
-
-```bash
-oauthkitchen scan --tenant <id> --client-id <id> --client-secret <secret>
-oauthkitchen translate --permission "Mail.ReadWrite"
-oauthkitchen explain --app-id <id>
-oauthkitchen baseline           # Generate sample config file
+npm run dev        # Dev server
+npm run lint       # ESLint (zero warnings required)
+npm run build      # TypeScript compile + Vite production build
+npx tsc --noEmit   # Type check only
 ```
 
 ---
 
 ## CI/CD Pipeline
 
-The GitHub Actions workflow (`.github/workflows/ci.yml`) runs on push/PR to `main`:
+`.github/workflows/ci.yml` runs on push/PR to `main`:
 
 | Job | What it does |
 |-----|-------------|
-| **lint** | `ruff check` + `ruff format --check` on Python 3.11 |
-| **test** | Pytest matrix: Ubuntu/Windows/macOS × Python 3.11/3.12; uploads coverage to Codecov |
-| **type-check** | `mypy` (informational only, non-blocking) |
-| **build** | Python package build verification |
-
-All jobs must pass before merging to `main`.
+| **lint** | `npm run lint` (ESLint zero warnings) |
+| **type-check** | `npx tsc --noEmit` |
+| **build** | `npm run build` (tsc + vite); uploads `dist/` artifact |
 
 ---
 
 ## Architecture & Key Conventions
 
-### Python Conventions
+### Authentication (MSAL.js)
 
-- **Python version:** 3.11+ (use modern syntax: `X | Y` unions, `match` statements, `tomllib`, etc.)
-- **Line length:** 100 characters (configured in `ruff`)
-- **Formatter/linter:** Ruff (not black, not flake8). Run `ruff format` before committing.
-- **Type hints:** Required on all public functions. MyPy strict mode is enforced.
-- **Dataclasses:** Core models use `@dataclass` or Pydantic `BaseModel` (CLI models use dataclasses; API schemas use Pydantic).
-- **Imports:** Ruff enforces `isort`-compatible ordering (rule `I`). First-party = `oauthkitchen`.
-- **Security rules:** Ruff rule `S` (bandit) is active. Avoid `S101` in test files (already ignored), but fix security warnings in source.
-- **No `assert` in source code:** Use explicit `if/raise` for runtime guards.
+- `@azure/msal-browser` and `@azure/msal-react` for browser-side OAuth
+- `PublicClientApplication` is constructed dynamically in `App.tsx` from settings stored in Zustand
+- `MsalProvider` wraps routes after MSAL is initialized
+- Login uses popup flow (`loginPopup`) — no redirects
+- Token acquisition: silent first, popup fallback (`acquireTokenSilent` → `acquireTokenPopup`)
+- `useIsAuthenticated()` / `useMsal()` / `useAccount()` MSAL hooks used throughout pages
 
-### Domain Model (`models.py`)
+### Domain Model (`types/models.ts`)
 
-Key enums to understand before touching any analysis logic:
+Key enums:
 
 | Enum | Values |
 |------|--------|
@@ -196,7 +126,7 @@ Key enums to understand before touching any analysis logic:
 | `AppType` | `FIRST_PARTY_MICROSOFT`, `TENANT_OWNED`, `THIRD_PARTY_MULTI_TENANT`, `EXTERNAL_UNKNOWN` |
 | `CredentialType` | `PASSWORD`, `CERTIFICATE` |
 
-### Risk Scoring (`analyzers/scoring.py`)
+### Risk Scoring (`lib/analyzers/scoring.ts`)
 
 Risk scores are 0–100. Thresholds:
 - **Critical:** ≥ 80
@@ -204,136 +134,74 @@ Risk scores are 0–100. Thresholds:
 - **Medium:** 40–59
 - **Low:** < 40
 
-Score multipliers (from `config.py` `ScoringWeights`):
-- Application (non-delegated) permission: **1.5×**
-- User consent (not admin): **1.2×**
+Score multipliers (from `ScoringWeights`):
+- Application permission: **1.5×**
+- User consent: **1.2×**
 - No verified publisher: **1.3×**
-- No owner (orphaned): **1.3×**
-- Unused app with high privileges: **1.4×**
-- External / multi-tenant app: **1.2×**
+- No owner: **1.3×**
+- Unused with high privileges: **1.4×**
+- External / multi-tenant: **1.2×**
 
-When modifying the scorer, keep multipliers configurable via `ScoringWeights`. Never hardcode weights inside `RiskScorer`.
+Keep weights configurable via `ScoringWeights`. Never hardcode values inside `RiskScorer`.
 
-### Permission Translator (`analyzers/translator.py`)
+### Permission Translator (`lib/analyzers/translator.ts`)
 
-Permission rules are loaded from a YAML file at `src/oauthkitchen/rules/permissions.yaml`. Each rule maps a permission scope name to:
-- `description` — plain English
-- `risk_category` — one of the `RiskCategory` enum values
-- `impact_score` — integer 0–100
-- `abuse_scenarios` — list of strings
+Rules are loaded at runtime from `public/permissions.json` (fetched via `fetch('/permissions.json')`). Each rule:
+- `scopeName` — the Graph permission scope
+- `plainEnglish` — human-readable description
+- `category` — maps to `RiskCategory`
+- `impactScore` — integer 0–100
+- `abuseScenarios` — list of strings
 
-When adding new permission rules, edit the YAML file directly. Do not hardcode permission metadata in Python.
+To add permissions: edit `public/permissions.json` directly.
 
-### Shadow OAuth Detector (`analyzers/shadow.py`)
+### Shadow OAuth Detector (`lib/analyzers/shadow.ts`)
 
-Detects these patterns (each yields a `ShadowOAuthFinding`):
+Detects 6 patterns, each yielding a `ShadowOAuthFinding`:
 1. External delegated high-impact permissions
 2. User-consented dangerous permissions
-3. Offline access risk (long-lived tokens)
+3. Offline access risk
 4. Inactive privileged apps
 5. Orphaned privileged apps
 6. Unverified publisher with high-impact permissions
 
-Each finding includes optional remediation suggestions (disabled by default, controlled by config).
+### Graph Client (`lib/api/graphClient.ts`)
 
-### Configuration (`config.py`)
+`GraphClient` wraps all Microsoft Graph API calls:
+- Constructed with `IPublicClientApplication` + `AccountInfo`
+- `get<T>(path)` — single page GET
+- `getAll<T>(path)` — fetches all pages automatically
+- `detectCapabilities()` — probes for `AuditLog.Read.All` access
 
-All configuration is expressed as dataclasses. The primary config file format is YAML (see `oauthkitchen.sample.yaml`). Environment variables override file values. Key classes:
+Always use `GraphClient` methods; never make raw `fetch` calls to Graph directly.
 
-- `AuthConfig` — tenant/client credentials and auth method
-- `ScoringWeights` — multipliers for risk factors (all configurable)
-- `ThresholdConfig` — credential expiry windows (critical/high/medium/low days)
-- `OutputConfig` — output directory and enabled formats
-- `AllowDenyConfig` — safe app allow-lists, deny-lists, trusted publishers
+### Scan Orchestrator (`lib/api/collectors/orchestrator.ts`)
 
-### Reporters (`reporters/`)
+`runScan(msalInstance, account, tenantId, options, onProgress)` coordinates the full scan:
+1. Detect capabilities (sign-in log availability)
+2. Load permission rules
+3. Collect app registrations
+4. Collect service principals with grants/owners
+5. Risk-score all service principals
+6. Detect shadow OAuth findings
+7. Identify expiring credentials
+8. Compute aggregate statistics → return `AnalysisResult`
 
-All reporters inherit from `BaseReporter`. Adding a new output format:
-1. Create a new file in `reporters/`
-2. Subclass `BaseReporter`
-3. Implement the `generate(result: AnalysisResult) -> str` method
-4. Register the format in `cli.py`
+### State Management
 
-### Graph Client (`graph_client.py`)
+- **`settingsStore`** — Zustand with `persist` middleware (localStorage). Holds `clientId`, `tenantId`, scope mode, thresholds.
+- **`scanStore`** — Zustand. Holds `currentScan: AnalysisResult | null`, `scanHistory`, `isScanning`, `scanProgress`. History is persisted; full result is not (too large for localStorage).
 
-The `GraphClient` handles all Microsoft Graph API calls. Authentication supports three methods, chosen at runtime from config:
-- `client_secret` — `password_credential_auth()`
-- `certificate` — `certificate_auth()`
-- `device_code` — `device_code_auth()` (interactive, for dev/testing)
+### Frontend Conventions
 
-API responses are cached via `utils/cache.py` (default TTL: 3600s). Always use `GraphClient` methods rather than making raw HTTP calls.
-
----
-
-## Web Application Conventions
-
-### Frontend (React + TypeScript)
-
-- **State management:** Zustand stores (not Redux, not Context for global state)
-- **Data fetching:** TanStack React Query v5 (`useQuery`, `useMutation`)
-- **HTTP client:** Axios (configured instance in `src/api/`)
+- **State management:** Zustand (not Redux, not Context for global state)
+- **HTTP client:** `GraphClient` (MSAL token-based, not Axios)
 - **Routing:** React Router v6 (`createBrowserRouter`)
-- **UI primitives:** Radix UI components, wrapped in `src/components/ui/`
-- **Styling:** Tailwind CSS utility classes; use `tailwind-merge` (`cn()` helper) to compose classes
+- **UI primitives:** Radix UI, wrapped in `src/components/ui/`
+- **Styling:** Tailwind CSS; use `cn()` helper to compose classes
 - **Icons:** Lucide React only
-- **No inline styles:** All styling must use Tailwind classes
-- **TypeScript strict mode:** No `any` types; explicit return types on exported functions
-
-### Backend (FastAPI)
-
-- **Database:** SQLAlchemy 2.0 async with Alembic migrations
-- **Schemas:** Pydantic v2 models in `app/schemas.py` (request/response validation)
-- **Auth:** JWT tokens (access + refresh) via `app/auth.py`
-- **Background tasks:** Celery + Redis for long-running scans
-- **CORS:** Enabled for the frontend origin only
-- **API versioning:** All routes prefixed with `/api/`
-
----
-
-## Testing Conventions
-
-- All tests live in `tests/` with the prefix `test_`.
-- Fixtures are defined in `conftest.py`. Use them; do not create one-off setup in test functions.
-- Tests use `pytest-mock` (`mocker` fixture) — do not use `unittest.mock` directly.
-- Tests must not make real network calls. Mock `GraphClient` at the boundary.
-- Coverage target: 80%+ on core analyzers (`scoring.py`, `shadow.py`, `translator.py`).
-- Add tests for every new analyzer feature or bug fix before the implementation is considered done.
-
----
-
-## Security Conventions
-
-- **Never commit credentials.** The `.gitignore` excludes `.env`, `*.yaml` (except the sample), and `*.pem`.
-- **Reporting-only by default.** The tool never modifies tenant configuration unless explicitly enabled.
-- **Remediation suggestions off by default.** Controlled by `output.include_remediation` in config.
-- **Sensitive config via environment variables**, not committed files, for CI/CD usage.
-- Follow OWASP top 10 mitigations in the web backend: parameterized queries, JWT expiry, password hashing with bcrypt.
-
----
-
-## Dependency Management
-
-### Python
-
-Dependencies are declared in `pyproject.toml`:
-- `[project.dependencies]` — runtime
-- `[project.optional-dependencies] dev` — dev/test only
-
-To add a dependency:
-```bash
-# Edit pyproject.toml, then:
-pip install -e ".[dev]"
-```
-
-Do not use `requirements.txt` for the CLI package (only the web backend uses one).
-
-### Frontend
-
-```bash
-cd web/frontend
-npm install <package>           # Runtime dep
-npm install -D <package>        # Dev dep
-```
+- **No inline styles**
+- **TypeScript strict mode:** No `any`; explicit return types on exports
 
 ---
 
@@ -341,13 +209,21 @@ npm install -D <package>        # Dev dep
 
 | File | Purpose |
 |------|---------|
-| `src/oauthkitchen/cli.py` | All CLI commands and output format dispatch |
-| `src/oauthkitchen/models.py` | All domain enums and dataclasses — read before changing data shapes |
-| `src/oauthkitchen/analyzers/scoring.py` | Risk score calculation logic |
-| `src/oauthkitchen/analyzers/shadow.py` | Shadow OAuth pattern definitions |
-| `src/oauthkitchen/config.py` | All configurable parameters and defaults |
-| `src/oauthkitchen/rules/permissions.yaml` | Permission metadata (add new permissions here) |
-| `oauthkitchen.sample.yaml` | Full configuration reference — keep in sync with `config.py` |
-| `tests/conftest.py` | Shared test fixtures — extend here, not in individual test files |
-| `pyproject.toml` | Build config, dependencies, ruff/mypy/pytest settings |
+| `src/types/models.ts` | All domain enums and interfaces — read before changing data shapes |
+| `src/lib/analyzers/scoring.ts` | Risk score calculation |
+| `src/lib/analyzers/shadow.ts` | Shadow OAuth pattern definitions |
+| `src/lib/analyzers/translator.ts` | Permission lookup + rule loading |
+| `src/lib/api/collectors/orchestrator.ts` | Main scan entry point |
+| `src/lib/store/settingsStore.ts` | All configurable parameters |
+| `src/App.tsx` | Dynamic MSAL init + routing + ProtectedRoute |
+| `public/permissions.json` | Permission metadata — add new scopes here |
 | `.github/workflows/ci.yml` | CI pipeline — all jobs must pass before merging |
+
+---
+
+## Security Conventions
+
+- **Read-only by design.** The app never modifies tenant configuration.
+- **No secrets committed.** `clientId`/`tenantId` live in localStorage via Zustand persist.
+- **No backend.** All data flows browser → MSAL → Microsoft Graph.
+- **Delegated permissions only.** The app acts on behalf of the signed-in user; admin consent is required once per tenant.
