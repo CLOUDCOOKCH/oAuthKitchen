@@ -3,22 +3,22 @@ import { motion } from 'framer-motion'
 import {
   LayoutDashboard,
   Scan,
-  Building2,
   ShieldCheck,
   Settings,
   LogOut,
   Menu,
   X,
   Shield,
+  FileSearch,
 } from 'lucide-react'
 import { useState } from 'react'
+import { useMsal } from '@azure/msal-react'
 import { cn } from '@/lib/utils'
-import { useAuthStore } from '@/lib/store'
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/scans', label: 'Scans', icon: Scan },
-  { path: '/tenants', label: 'Tenants', icon: Building2 },
+  { path: '/scans', label: 'Scan', icon: Scan },
+  { path: '/scans/current', label: 'Results', icon: FileSearch },
   { path: '/permissions', label: 'Permissions', icon: ShieldCheck },
   { path: '/settings', label: 'Settings', icon: Settings },
 ]
@@ -26,11 +26,15 @@ const navItems = [
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
-  const { user, logout } = useAuthStore()
+  const { instance, accounts } = useMsal()
+  const account = accounts[0]
+
+  const handleLogout = () => {
+    instance.logoutPopup({ account })
+  }
 
   return (
     <div className="min-h-screen gradient-mesh">
-      {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/50 lg:hidden"
@@ -56,10 +60,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <h1 className="text-lg font-bold">OAuthKitchen</h1>
               <p className="text-xs text-muted-foreground">Security Analysis</p>
             </div>
-            <button
-              className="ml-auto lg:hidden"
-              onClick={() => setSidebarOpen(false)}
-            >
+            <button className="ml-auto lg:hidden" onClick={() => setSidebarOpen(false)}>
               <X className="h-5 w-5" />
             </button>
           </div>
@@ -67,14 +68,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           {/* Navigation */}
           <nav className="flex-1 px-3 py-4 space-y-1">
             {navItems.map((item) => {
-              const isActive = location.pathname === item.path
+              const isActive =
+                item.path === '/'
+                  ? location.pathname === '/'
+                  : location.pathname.startsWith(item.path)
               return (
                 <Link
                   key={item.path}
                   to={item.path}
                   onClick={() => setSidebarOpen(false)}
                   className={cn(
-                    'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200',
+                    'relative flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200',
                     isActive
                       ? 'bg-primary/10 text-primary'
                       : 'text-muted-foreground hover:bg-accent hover:text-foreground'
@@ -95,23 +99,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
           {/* User section */}
           <div className="border-t border-border/50 p-4">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="text-sm font-medium text-primary">
-                  {user?.email?.[0].toUpperCase() || 'U'}
-                </span>
+            {account && (
+              <div className="flex items-center gap-3 mb-3">
+                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <span className="text-sm font-medium text-primary">
+                    {(account.name || account.username)?.[0]?.toUpperCase() || 'U'}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{account.name || account.username}</p>
+                  <p className="text-xs text-muted-foreground truncate">{account.username}</p>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">
-                  {user?.display_name || user?.email}
-                </p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {user?.email}
-                </p>
-              </div>
-            </div>
+            )}
             <button
-              onClick={logout}
+              onClick={handleLogout}
               className="flex items-center gap-2 w-full px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors"
             >
               <LogOut className="h-4 w-4" />
@@ -123,7 +125,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Main content */}
       <div className="lg:pl-64">
-        {/* Top bar */}
         <header className="sticky top-0 z-30 glass border-b border-border/50">
           <div className="flex items-center gap-4 px-4 py-3">
             <button
@@ -136,7 +137,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        {/* Page content */}
         <main className="p-4 lg:p-6">
           <motion.div
             initial={{ opacity: 0, y: 10 }}

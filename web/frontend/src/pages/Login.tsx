@@ -1,49 +1,40 @@
-import { useState } from 'react'
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Shield, Mail, Lock, ArrowRight, Loader2 } from 'lucide-react'
+import { Shield, Loader2 } from 'lucide-react'
+import { useMsal, useIsAuthenticated } from '@azure/msal-react'
+import { InteractionStatus } from '@azure/msal-browser'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { useAuthStore } from '@/lib/store'
-import { login, register } from '@/lib/api'
+import { GRAPH_SCOPES_LIMITED, GRAPH_SCOPES_FULL } from '@/lib/msalConfig'
+import { useSettingsStore } from '@/lib/store'
 
 export default function Login() {
-  const [isLogin, setIsLogin] = useState(true)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [displayName, setDisplayName] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-
+  const { instance, inProgress } = useMsal()
+  const isAuthenticated = useIsAuthenticated()
   const navigate = useNavigate()
-  const { setAuth } = useAuthStore()
+  const { settings } = useSettingsStore()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
+  useEffect(() => {
+    if (isAuthenticated) navigate('/', { replace: true })
+  }, [isAuthenticated, navigate])
 
+  const isLoading =
+    inProgress === InteractionStatus.Login ||
+    inProgress === InteractionStatus.AcquireToken ||
+    inProgress === InteractionStatus.HandleRedirect
+
+  const handleSignIn = async () => {
+    const scopes = settings.useLimitedScopes ? GRAPH_SCOPES_LIMITED : GRAPH_SCOPES_FULL
     try {
-      let data
-      if (isLogin) {
-        data = await login(email, password)
-      } else {
-        data = await register(email, password, displayName)
-      }
-      // The response includes both token and user info
-      setAuth(data.access_token, data.user)
-      navigate('/')
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'An error occurred')
-    } finally {
-      setLoading(false)
+      await instance.loginPopup({ scopes })
+    } catch (err) {
+      console.error('Login failed:', err)
     }
   }
 
   return (
     <div className="min-h-screen gradient-mesh flex items-center justify-center p-4">
-      {/* Background decorations */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl" />
@@ -67,108 +58,50 @@ export default function Login() {
             </motion.div>
             <CardTitle className="text-2xl">OAuthKitchen</CardTitle>
             <CardDescription>
-              {isLogin
-                ? 'Sign in to your account'
-                : 'Create a new account'}
+              Sign in with your Microsoft work account to analyse OAuth app security
             </CardDescription>
           </CardHeader>
 
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {!isLogin && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">
-                    Display Name
-                  </label>
-                  <Input
-                    placeholder="Your name"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    className="bg-background/50"
-                  />
-                </div>
+          <CardContent className="space-y-4">
+            <Button
+              className="w-full"
+              size="lg"
+              disabled={isLoading}
+              onClick={handleSignIn}
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <svg className="h-4 w-4 mr-2" viewBox="0 0 21 21" fill="none">
+                  <rect x="1" y="1" width="9" height="9" fill="#f25022" />
+                  <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
+                  <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
+                  <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
+                </svg>
               )}
+              {isLoading ? 'Signing in…' : 'Sign in with Microsoft'}
+            </Button>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">
-                  Email
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 bg-background/50"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 bg-background/50"
-                    required
-                    minLength={8}
-                  />
-                </div>
-              </div>
-
-              {error && (
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-sm text-red-500 text-center"
-                >
-                  {error}
-                </motion.p>
-              )}
-
-              <Button
-                type="submit"
-                className="w-full group"
-                disabled={loading}
-              >
-                {loading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <>
-                    {isLogin ? 'Sign In' : 'Create Account'}
-                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                  </>
-                )}
-              </Button>
-            </form>
-
-            <div className="mt-6 text-center">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsLogin(!isLogin)
-                  setError('')
-                }}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {isLogin
-                  ? "Don't have an account? Sign up"
-                  : 'Already have an account? Sign in'}
-              </button>
+            <div className="rounded-lg border border-border/50 bg-muted/30 p-3 text-xs text-muted-foreground space-y-1">
+              <p className="font-medium text-foreground">Required Graph permissions</p>
+              <p>
+                {settings.useLimitedScopes
+                  ? 'Application.Read.All · Directory.Read.All'
+                  : 'Application.Read.All · Directory.Read.All · AuditLog.Read.All'}
+              </p>
+              <p>This app is read-only — it never modifies your tenant configuration.</p>
             </div>
           </CardContent>
         </Card>
 
         <p className="mt-4 text-center text-xs text-muted-foreground">
-          OAuth Security Analysis Tool for Microsoft Entra ID
+          OAuth Security Analysis for Microsoft Entra ID ·{' '}
+          <button
+            className="underline hover:text-foreground transition-colors"
+            onClick={() => navigate('/settings')}
+          >
+            Settings
+          </button>
         </p>
       </motion.div>
     </div>
