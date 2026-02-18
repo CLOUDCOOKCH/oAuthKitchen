@@ -87,6 +87,9 @@ oauthkitchen-output/
 !oauthkitchen.sample.yaml
 .cache.json
 
+# Allow TypeScript/JavaScript lib directory (not Python)
+!src/lib/
+
 # Secrets - NEVER commit these
 *.pem
 *.pfx
