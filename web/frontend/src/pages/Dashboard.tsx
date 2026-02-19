@@ -1,66 +1,100 @@
-import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
-  Building2,
-  Scan,
-  AlertTriangle,
   ShieldAlert,
   ShieldX,
-  Clock,
+  Activity,
+  AlertTriangle,
   ArrowRight,
   TrendingUp,
+  Key,
 } from 'lucide-react'
-import { Link } from 'react-router-dom'
 import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
   PieChart,
   Pie,
   Cell,
+  Tooltip,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import StatsCard from '@/components/StatsCard'
 import RiskBadge from '@/components/RiskBadge'
-import { getDashboardStats } from '@/lib/api'
-import { formatRelativeTime, cn } from '@/lib/utils'
+import { useScanStore } from '@/lib/store'
+import { getTopRiskyApps } from '@/types/models'
+import { formatDate, cn } from '@/lib/utils'
 
-const COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#6b7280']
+const PIE_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#6b7280']
 
 export default function Dashboard() {
-  const { data: stats, isLoading } = useQuery({
-    queryKey: ['dashboard-stats'],
-    queryFn: () => getDashboardStats(30),
-  })
+  const { currentScan, scanHistory } = useScanStore()
 
-  if (isLoading) {
+  if (!currentScan) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Dashboard</h1>
+            <p className="text-muted-foreground">Overview of your OAuth security posture</p>
+          </div>
+          <Link to="/scans">
+            <Button className="group">
+              Run First Scan
+              <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </Button>
+          </Link>
+        </div>
+        <Card className="border-dashed border-2">
+          <CardContent className="flex flex-col items-center justify-center py-16 gap-4">
+            <Activity className="h-12 w-12 text-muted-foreground" />
+            <h2 className="text-lg font-semibold">No scan data yet</h2>
+            <p className="text-muted-foreground text-sm text-center max-w-sm">
+              Run your first scan to see the OAuth security posture of your Microsoft Entra ID
+              tenant.
+            </p>
+            <Link to="/scans">
+              <Button>Start Scan</Button>
+            </Link>
+          </CardContent>
+        </Card>
       </div>
     )
   }
 
-  const pieData = stats?.findings_by_type
-    ? Object.entries(stats.findings_by_type).map(([name, value]) => ({
-        name: name.replace(/_/g, ' '),
-        value,
-      }))
-    : []
+  const topRisky = getTopRiskyApps(currentScan)
+
+  const findingsByType: Record<string, number> = {}
+  for (const finding of currentScan.shadowFindings || []) {
+    const label = finding.findingType.replace(/_/g, ' ')
+    findingsByType[label] = (findingsByType[label] || 0) + 1
+  }
+  const pieData = Object.entries(findingsByType).map(([name, value]) => ({ name, value }))
+
+  const riskDist = { critical: 0, high: 0, medium: 0, low: 0 }
+  for (const score of Object.values(currentScan.riskScores || {})) {
+    const level = score.riskLevel as keyof typeof riskDist
+    if (level in riskDist) riskDist[level]++
+  }
+  const barData = [
+    { name: 'Critical', value: riskDist.critical, fill: '#ef4444' },
+    { name: 'High', value: riskDist.high, fill: '#f97316' },
+    { name: 'Medium', value: riskDist.medium, fill: '#eab308' },
+    { name: 'Low', value: riskDist.low, fill: '#22c55e' },
+  ]
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground">
-            Overview of your OAuth security posture
+            Last scan: {formatDate(currentScan.analysisTimestamp)} ·{' '}
+            <span className="capitalize">{currentScan.mode} mode</span>
           </p>
         </div>
         <Link to="/scans">
@@ -71,88 +105,65 @@ export default function Dashboard() {
         </Link>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatsCard
-          title="Total Tenants"
-          value={stats?.total_tenants ?? 0}
-          icon={Building2}
+          title="Service Principals"
+          value={currentScan.totalServicePrincipals ?? 0}
+          icon={Activity}
           delay={0}
         />
         <StatsCard
-          title="Total Scans"
-          value={stats?.total_scans ?? 0}
-          icon={Scan}
+          title="Critical Risk"
+          value={currentScan.criticalCount ?? 0}
+          icon={ShieldX}
+          variant="critical"
           delay={0.1}
         />
         <StatsCard
-          title="Critical Findings"
-          value={stats?.critical_findings ?? 0}
-          icon={ShieldX}
-          variant="critical"
+          title="High Risk"
+          value={currentScan.highRiskCount ?? 0}
+          icon={ShieldAlert}
+          variant="high"
           delay={0.2}
         />
         <StatsCard
-          title="High Risk"
-          value={stats?.high_findings ?? 0}
-          icon={ShieldAlert}
+          title="Shadow Findings"
+          value={currentScan.shadowFindings?.length ?? 0}
+          icon={AlertTriangle}
           variant="high"
           delay={0.3}
         />
       </div>
 
-      {/* Unacknowledged Alert */}
-      {(stats?.unacknowledged_findings ?? 0) > 0 && (
+      {(currentScan.expiringCredentials30Days ?? 0) > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="rounded-xl border border-yellow-500/20 bg-yellow-500/10 p-4"
         >
           <div className="flex items-center gap-3">
-            <AlertTriangle className="h-5 w-5 text-yellow-500" />
-            <div className="flex-1">
-              <p className="font-medium">
-                {stats?.unacknowledged_findings} unacknowledged findings
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Review and acknowledge findings to track your remediation progress
-              </p>
-            </div>
-            <Link to="/scans">
-              <Button variant="outline" size="sm">
-                Review
-              </Button>
-            </Link>
+            <Key className="h-5 w-5 text-yellow-500" />
+            <p className="font-medium">
+              {currentScan.expiringCredentials30Days} credential(s) expiring within 30 days
+            </p>
           </div>
         </motion.div>
       )}
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Findings Trend Chart */}
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-primary" />
-              Findings Trend (Last 30 Days)
+              Risk Distribution
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-64">
+            <div className="h-56">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={stats?.findings_trend ?? []}>
-                  <defs>
-                    <linearGradient id="colorFindings" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(210, 100%, 50%)" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="hsl(210, 100%, 50%)" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
+                <BarChart data={barData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis
-                    dataKey="date"
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                    tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                  />
+                  <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                   <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
                   <Tooltip
                     contentStyle={{
@@ -161,183 +172,120 @@ export default function Dashboard() {
                       borderRadius: '8px',
                     }}
                   />
-                  <Area
-                    type="monotone"
-                    dataKey="count"
-                    stroke="hsl(210, 100%, 50%)"
-                    fillOpacity={1}
-                    fill="url(#colorFindings)"
-                  />
-                </AreaChart>
+                  <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                    {barData.map((entry, index) => (
+                      <Cell key={index} fill={entry.fill} />
+                    ))}
+                  </Bar>
+                </BarChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
 
-        {/* Findings by Type */}
         <Card>
           <CardHeader>
             <CardTitle>Findings by Type</CardTitle>
           </CardHeader>
           <CardContent>
             {pieData.length > 0 ? (
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="value"
-                    >
-                      {pieData.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        borderColor: 'hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
+              <>
+                <div className="h-40">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={pieData} cx="50%" cy="50%" innerRadius={40} outerRadius={65} paddingAngle={3} dataKey="value">
+                        {pieData.map((_, i) => (
+                          <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          borderColor: 'hsl(var(--border))',
+                          borderRadius: '8px',
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-3 space-y-1">
+                  {pieData.slice(0, 4).map((item, i) => (
+                    <div key={item.name} className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
+                        <span className="capitalize">{item.name}</span>
+                      </div>
+                      <span className="font-medium">{item.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
             ) : (
-              <div className="h-64 flex items-center justify-center text-muted-foreground">
-                No findings data
+              <div className="h-40 flex items-center justify-center text-muted-foreground text-sm">
+                No shadow findings
               </div>
             )}
-            <div className="mt-4 space-y-2">
-              {pieData.slice(0, 4).map((item, index) => (
-                <div key={item.name} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="h-3 w-3 rounded-full"
-                      style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                    />
-                    <span className="capitalize">{item.name}</span>
+          </CardContent>
+        </Card>
+      </div>
+
+      {topRisky.length > 0 && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <ShieldAlert className="h-5 w-5 text-orange-500" />
+              Top Risky Applications
+            </CardTitle>
+            <Link to="/scans">
+              <Button variant="ghost" size="sm">View full results</Button>
+            </Link>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {topRisky.slice(0, 8).map(([sp, score], i) => (
+                <div key={sp.objectId} className="flex items-center gap-3 p-3 rounded-lg bg-accent/50">
+                  <div className={cn(
+                    'flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold flex-shrink-0',
+                    i === 0 ? 'bg-red-500/20 text-red-500' : i === 1 ? 'bg-orange-500/20 text-orange-500' : 'bg-yellow-500/20 text-yellow-500'
+                  )}>
+                    {i + 1}
                   </div>
-                  <span className="font-medium">{item.value}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate text-sm">{sp.displayName}</p>
+                    <p className="text-xs text-muted-foreground">Score: {score.totalScore}</p>
+                  </div>
+                  <RiskBadge level={score.riskLevel} />
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
-      </div>
+      )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Recent Scans */}
+      {scanHistory.length > 0 && (
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-primary" />
-              Recent Scans
-            </CardTitle>
-            <Link to="/scans">
-              <Button variant="ghost" size="sm">
-                View all
-              </Button>
-            </Link>
-          </CardHeader>
+          <CardHeader><CardTitle>Recent Scans</CardTitle></CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {stats?.recent_scans?.length ? (
-                stats.recent_scans.map((scan: any) => (
-                  <Link
-                    key={scan.id}
-                    to={`/scans/${scan.id}`}
-                    className="flex items-center justify-between p-3 rounded-lg hover:bg-accent transition-colors"
-                  >
-                    <div>
-                      <p className="font-medium">{scan.tenant_name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {formatRelativeTime(scan.created_at)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {scan.critical_count > 0 && (
-                        <RiskBadge level="critical" />
-                      )}
-                      {scan.high_risk_count > 0 && (
-                        <RiskBadge level="high" />
-                      )}
-                      <span
-                        className={cn(
-                          'text-sm font-medium',
-                          scan.status === 'completed'
-                            ? 'text-green-500'
-                            : scan.status === 'running'
-                            ? 'text-blue-500'
-                            : scan.status === 'failed'
-                            ? 'text-red-500'
-                            : 'text-yellow-500'
-                        )}
-                      >
-                        {scan.status}
-                      </span>
-                    </div>
-                  </Link>
-                ))
-              ) : (
-                <p className="text-center text-muted-foreground py-8">
-                  No scans yet. Start by adding a tenant configuration.
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Top Risky Apps */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ShieldAlert className="h-5 w-5 text-orange-500" />
-              Top Risky Applications
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {stats?.top_risky_apps?.length ? (
-                stats.top_risky_apps.slice(0, 5).map((app: any, index: number) => (
-                  <div
-                    key={app.app_id}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-accent/50"
-                  >
-                    <div
-                      className={cn(
-                        'flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold',
-                        index === 0
-                          ? 'bg-red-500/20 text-red-500'
-                          : index === 1
-                          ? 'bg-orange-500/20 text-orange-500'
-                          : 'bg-yellow-500/20 text-yellow-500'
-                      )}
-                    >
-                      {index + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{app.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Score: {app.risk_score}
-                      </p>
-                    </div>
-                    <RiskBadge level={app.risk_level} />
+            <div className="space-y-2">
+              {scanHistory.slice(0, 5).map((scan) => (
+                <div key={scan.id} className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
+                  <div>
+                    <p className="text-sm font-medium">{scan.tenantId}</p>
+                    <p className="text-xs text-muted-foreground">{formatDate(scan.startedAt)}</p>
                   </div>
-                ))
-              ) : (
-                <p className="text-center text-muted-foreground py-8">
-                  No risk data available
-                </p>
-              )}
+                  <div className="flex items-center gap-2">
+                    {scan.criticalCount > 0 && <RiskBadge level="critical" />}
+                    {scan.highRiskCount > 0 && <RiskBadge level="high" />}
+                    <span className={cn('text-xs font-medium', scan.status === 'completed' ? 'text-green-500' : scan.status === 'failed' ? 'text-red-500' : 'text-blue-500')}>
+                      {scan.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
-      </div>
+      )}
     </div>
   )
 }

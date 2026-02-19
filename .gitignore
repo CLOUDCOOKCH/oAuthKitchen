@@ -1,66 +1,14 @@
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
+# Dependencies
+node_modules/
 
-# C extensions
-*.so
-
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
+# Build output
 dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
+build/
 
-# PyInstaller
-*.manifest
-*.spec
-
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
-cover/
-
-# Translations
-*.mo
-*.pot
-
-# Environments
+# Environment files
 .env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
+.env.local
+.env.*.local
 
 # IDE
 .idea/
@@ -69,28 +17,27 @@ venv.bak/
 *.swo
 *~
 
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Ruff
-.ruff_cache/
-
 # OS files
 .DS_Store
 Thumbs.db
 
-# OAuthKitchen specific
-oauthkitchen-output/
-*.yaml
-!oauthkitchen.sample.yaml
-.cache.json
+# Logs
+*.log
+npm-debug.log*
 
-# Secrets - NEVER commit these
+# TypeScript cache
+*.tsbuildinfo
+
+# Vite cache
+.vite/
+
+# Test coverage
+coverage/
+coverage.xml
+
+# Secrets — never commit these
 *.pem
 *.pfx
 *.key
 credentials.json
 secrets.json
-.env.local

@@ -1,0 +1,551 @@
+{
+  "microsoft_graph": {
+    "Directory.Read.All": {
+      "plainEnglish": "Read all data in the directory",
+      "category": "data_exfiltration",
+      "impactScore": 75,
+      "abuseScenarios": [
+        "Enumerate all users, groups, and roles in the tenant",
+        "Map organizational structure for targeted attacks",
+        "Identify privileged accounts and service accounts"
+      ],
+      "adminImpactNote": "Grants read access to the entire Azure AD directory"
+    },
+    "Directory.ReadWrite.All": {
+      "plainEnglish": "Read and write all data in the directory",
+      "category": "tenant_takeover",
+      "impactScore": 95,
+      "abuseScenarios": [
+        "Modify user attributes and group memberships",
+        "Create backdoor accounts with elevated privileges",
+        "Change service principal configurations to maintain persistence"
+      ],
+      "adminImpactNote": "Full read-write access to Azure AD — highest risk permission"
+    },
+    "User.Read": {
+      "plainEnglish": "Sign in and read the signed-in user's profile",
+      "category": "read_only",
+      "impactScore": 10,
+      "abuseScenarios": [],
+      "adminImpactNote": null
+    },
+    "User.Read.All": {
+      "plainEnglish": "Read all users' full profiles",
+      "category": "data_exfiltration",
+      "impactScore": 70,
+      "abuseScenarios": [
+        "Harvest email addresses, phone numbers, and job titles for social engineering",
+        "Identify employees with access to sensitive systems"
+      ],
+      "adminImpactNote": "Access to profiles of all users in the organization"
+    },
+    "User.ReadWrite.All": {
+      "plainEnglish": "Read and write all users' full profiles",
+      "category": "privilege_escalation",
+      "impactScore": 90,
+      "abuseScenarios": [
+        "Reset passwords to take over user accounts",
+        "Modify MFA settings to bypass authentication",
+        "Change user attributes to escalate privileges"
+      ],
+      "adminImpactNote": "Can modify any user account including admin accounts"
+    },
+    "Mail.Read": {
+      "plainEnglish": "Read user mail",
+      "category": "data_exfiltration",
+      "impactScore": 70,
+      "abuseScenarios": [
+        "Read all emails in user mailboxes",
+        "Extract sensitive business information, credentials, or PII",
+        "Monitor for MFA codes and password reset emails"
+      ],
+      "adminImpactNote": "When granted as application permission, reads all mailboxes in the tenant"
+    },
+    "Mail.ReadWrite": {
+      "plainEnglish": "Read and write access to user mail",
+      "category": "data_exfiltration",
+      "impactScore": 80,
+      "abuseScenarios": [
+        "Read, send, and delete emails on behalf of users",
+        "Create mail rules to silently forward emails externally",
+        "Delete evidence of compromise"
+      ],
+      "adminImpactNote": "Full access to user mailboxes including deletion"
+    },
+    "Mail.Send": {
+      "plainEnglish": "Send mail as a user",
+      "category": "lateral_movement",
+      "impactScore": 65,
+      "abuseScenarios": [
+        "Send phishing emails from legitimate user accounts",
+        "Impersonate executives for BEC attacks"
+      ],
+      "adminImpactNote": null
+    },
+    "Files.ReadWrite.All": {
+      "plainEnglish": "Read and write files in all site collections",
+      "category": "data_exfiltration",
+      "impactScore": 85,
+      "abuseScenarios": [
+        "Access and exfiltrate all SharePoint and OneDrive files",
+        "Implant malicious files in shared drives",
+        "Delete or encrypt files for ransomware"
+      ],
+      "adminImpactNote": "Full access to all files across the entire organization"
+    },
+    "Files.Read.All": {
+      "plainEnglish": "Read all files that the user can access",
+      "category": "data_exfiltration",
+      "impactScore": 70,
+      "abuseScenarios": [
+        "Exfiltrate sensitive documents and intellectual property",
+        "Access confidential financial records and HR data"
+      ],
+      "adminImpactNote": null
+    },
+    "Sites.ReadWrite.All": {
+      "plainEnglish": "Edit or delete items in all site collections",
+      "category": "data_exfiltration",
+      "impactScore": 82,
+      "abuseScenarios": [
+        "Access all SharePoint content across the organization",
+        "Modify or delete critical business documents",
+        "Upload malicious content to SharePoint"
+      ],
+      "adminImpactNote": "Full access to all SharePoint sites"
+    },
+    "Sites.FullControl.All": {
+      "plainEnglish": "Full control of all site collections",
+      "category": "data_exfiltration",
+      "impactScore": 88,
+      "abuseScenarios": [
+        "Complete control over all SharePoint sites including settings",
+        "Delete entire site collections"
+      ],
+      "adminImpactNote": "Admin-level control over all SharePoint content"
+    },
+    "Application.ReadWrite.All": {
+      "plainEnglish": "Read and write all applications",
+      "category": "privilege_escalation",
+      "impactScore": 92,
+      "abuseScenarios": [
+        "Modify app registrations to add malicious redirect URIs",
+        "Add credentials to existing high-privilege applications",
+        "Create new backdoor applications with elevated permissions"
+      ],
+      "adminImpactNote": "Can modify any application registration in the tenant — enables persistence"
+    },
+    "Application.Read.All": {
+      "plainEnglish": "Read all applications",
+      "category": "data_exfiltration",
+      "impactScore": 60,
+      "abuseScenarios": [
+        "Enumerate all registered applications to find attack targets",
+        "Identify high-privilege apps that could be compromised"
+      ],
+      "adminImpactNote": null
+    },
+    "AppRoleAssignment.ReadWrite.All": {
+      "plainEnglish": "Read and write all app role assignments",
+      "category": "privilege_escalation",
+      "impactScore": 90,
+      "abuseScenarios": [
+        "Grant high-privilege app roles to malicious service principals",
+        "Remove security-critical role assignments"
+      ],
+      "adminImpactNote": "Can modify who has what application permissions"
+    },
+    "DelegatedPermissionGrant.ReadWrite.All": {
+      "plainEnglish": "Read and write all delegated permission grants",
+      "category": "privilege_escalation",
+      "impactScore": 88,
+      "abuseScenarios": [
+        "Grant any delegated permission to any application without user consent",
+        "Bypass consent policies"
+      ],
+      "adminImpactNote": "Can grant arbitrary delegated permissions to applications"
+    },
+    "RoleManagement.ReadWrite.Directory": {
+      "plainEnglish": "Read and write all directory RBAC settings",
+      "category": "tenant_takeover",
+      "impactScore": 98,
+      "abuseScenarios": [
+        "Add any user or service principal to the Global Administrator role",
+        "Create custom privileged roles",
+        "Completely take over the Azure AD tenant"
+      ],
+      "adminImpactNote": "Can grant Global Admin — highest possible risk"
+    },
+    "RoleManagement.Read.Directory": {
+      "plainEnglish": "Read all directory RBAC settings",
+      "category": "data_exfiltration",
+      "impactScore": 65,
+      "abuseScenarios": [
+        "Map all privileged accounts and role assignments",
+        "Identify targets for privilege escalation"
+      ],
+      "adminImpactNote": null
+    },
+    "GroupMember.ReadWrite.All": {
+      "plainEnglish": "Read and write all group memberships",
+      "category": "privilege_escalation",
+      "impactScore": 80,
+      "abuseScenarios": [
+        "Add self to privileged groups (e.g., Global Admins)",
+        "Remove users from security groups to disrupt access controls"
+      ],
+      "adminImpactNote": "Can add principals to any group including privileged ones"
+    },
+    "Group.ReadWrite.All": {
+      "plainEnglish": "Read and write all groups",
+      "category": "privilege_escalation",
+      "impactScore": 78,
+      "abuseScenarios": [
+        "Modify group settings and memberships",
+        "Create groups for unauthorized resource access"
+      ],
+      "adminImpactNote": null
+    },
+    "Group.Read.All": {
+      "plainEnglish": "Read all groups",
+      "category": "data_exfiltration",
+      "impactScore": 50,
+      "abuseScenarios": [
+        "Enumerate security groups to identify privileged users",
+        "Map organizational structure"
+      ],
+      "adminImpactNote": null
+    },
+    "Policy.ReadWrite.All": {
+      "plainEnglish": "Read and write all policies",
+      "category": "tenant_takeover",
+      "impactScore": 90,
+      "abuseScenarios": [
+        "Disable Conditional Access policies",
+        "Weaken authentication policies to bypass MFA",
+        "Modify token lifetime policies to extend session persistence"
+      ],
+      "adminImpactNote": "Can modify security policies affecting the entire tenant"
+    },
+    "AuditLog.Read.All": {
+      "plainEnglish": "Read all audit log data",
+      "category": "data_exfiltration",
+      "impactScore": 65,
+      "abuseScenarios": [
+        "Monitor security investigations to evade detection",
+        "Track which activities are being audited"
+      ],
+      "adminImpactNote": null
+    },
+    "PrivilegedAccess.ReadWrite.AzureAD": {
+      "plainEnglish": "Read and write privileged access to Azure AD roles",
+      "category": "tenant_takeover",
+      "impactScore": 95,
+      "abuseScenarios": [
+        "Activate privileged roles for unauthorized accounts",
+        "Extend privileged access duration"
+      ],
+      "adminImpactNote": "Controls PIM (Privileged Identity Management) for Azure AD"
+    },
+    "RoleAssignmentSchedule.ReadWrite.Directory": {
+      "plainEnglish": "Read and write all role assignment schedules",
+      "category": "tenant_takeover",
+      "impactScore": 93,
+      "abuseScenarios": [
+        "Schedule privileged role activations for later",
+        "Create persistent privileged access"
+      ],
+      "adminImpactNote": null
+    },
+    "EntitlementManagement.ReadWrite.All": {
+      "plainEnglish": "Read and write entitlement management resources",
+      "category": "privilege_escalation",
+      "impactScore": 82,
+      "abuseScenarios": [
+        "Manipulate access packages to grant unauthorized resource access",
+        "Bypass access review processes"
+      ],
+      "adminImpactNote": null
+    },
+    "Chat.Read.All": {
+      "plainEnglish": "Read all chat messages in Teams",
+      "category": "data_exfiltration",
+      "impactScore": 72,
+      "abuseScenarios": [
+        "Read all Teams messages including private conversations",
+        "Extract sensitive business information, credentials, or PII shared over Teams"
+      ],
+      "adminImpactNote": "Application permission — reads all chats in the organization"
+    },
+    "ChannelMessage.Read.All": {
+      "plainEnglish": "Read all Teams channel messages",
+      "category": "data_exfiltration",
+      "impactScore": 68,
+      "abuseScenarios": [
+        "Read all channel messages across all Teams",
+        "Extract internal communications"
+      ],
+      "adminImpactNote": null
+    },
+    "Team.ReadWrite.All": {
+      "plainEnglish": "Read and write all teams",
+      "category": "lateral_movement",
+      "impactScore": 70,
+      "abuseScenarios": [
+        "Modify team settings and memberships",
+        "Add bots or connectors to teams for ongoing access"
+      ],
+      "adminImpactNote": null
+    },
+    "SecurityEvents.ReadWrite.All": {
+      "plainEnglish": "Read and update your organization's security events",
+      "category": "data_exfiltration",
+      "impactScore": 75,
+      "abuseScenarios": [
+        "Read all security alerts — understand what the SOC is investigating",
+        "Dismiss security alerts to cover tracks"
+      ],
+      "adminImpactNote": null
+    },
+    "SecurityActions.ReadWrite.All": {
+      "plainEnglish": "Read and update your organization's security actions",
+      "category": "data_exfiltration",
+      "impactScore": 72,
+      "abuseScenarios": [
+        "Trigger or cancel security response actions",
+        "Read live threat intelligence"
+      ],
+      "adminImpactNote": null
+    },
+    "DeviceManagementApps.ReadWrite.All": {
+      "plainEnglish": "Read and write Microsoft Intune apps",
+      "category": "lateral_movement",
+      "impactScore": 80,
+      "abuseScenarios": [
+        "Deploy malicious applications to all managed devices",
+        "Modify app configuration profiles"
+      ],
+      "adminImpactNote": "Can deploy software to all Intune-managed devices"
+    },
+    "DeviceManagementConfiguration.ReadWrite.All": {
+      "plainEnglish": "Read and write Microsoft Intune device configuration",
+      "category": "lateral_movement",
+      "impactScore": 80,
+      "abuseScenarios": [
+        "Weaken device security baselines",
+        "Enable remote access or disable endpoint protection"
+      ],
+      "adminImpactNote": "Can modify device security policies for all managed devices"
+    },
+    "DeviceManagementManagedDevices.ReadWrite.All": {
+      "plainEnglish": "Read and write Microsoft Intune devices",
+      "category": "lateral_movement",
+      "impactScore": 78,
+      "abuseScenarios": [
+        "Wipe or retire managed devices",
+        "Unenroll devices from management"
+      ],
+      "adminImpactNote": null
+    },
+    "Reports.Read.All": {
+      "plainEnglish": "Read all usage reports",
+      "category": "data_exfiltration",
+      "impactScore": 55,
+      "abuseScenarios": [
+        "Access usage reports that may contain user activity information",
+        "Identify high-value targets based on activity patterns"
+      ],
+      "adminImpactNote": null
+    },
+    "AccessReview.ReadWrite.All": {
+      "plainEnglish": "Read and write all access reviews",
+      "category": "privilege_escalation",
+      "impactScore": 75,
+      "abuseScenarios": [
+        "Approve unauthorized access review decisions",
+        "Manipulate access review results to maintain unauthorized access"
+      ],
+      "adminImpactNote": null
+    },
+    "Calendars.ReadWrite": {
+      "plainEnglish": "Read and write user calendars",
+      "category": "data_exfiltration",
+      "impactScore": 55,
+      "abuseScenarios": [
+        "Read calendar entries to understand executive schedules",
+        "Create fake meeting invites for phishing"
+      ],
+      "adminImpactNote": null
+    },
+    "Contacts.ReadWrite": {
+      "plainEnglish": "Read and write user contacts",
+      "category": "data_exfiltration",
+      "impactScore": 50,
+      "abuseScenarios": [
+        "Harvest contact information for social engineering",
+        "Modify contacts to redirect communications"
+      ],
+      "adminImpactNote": null
+    },
+    "Tasks.ReadWrite": {
+      "plainEnglish": "Read and write user tasks",
+      "category": "data_exfiltration",
+      "impactScore": 40,
+      "abuseScenarios": [
+        "Read task lists that may contain sensitive project information"
+      ],
+      "adminImpactNote": null
+    },
+    "MailboxSettings.ReadWrite": {
+      "plainEnglish": "Read and write user mailbox settings",
+      "category": "persistence",
+      "impactScore": 65,
+      "abuseScenarios": [
+        "Configure email forwarding rules to external addresses",
+        "Set out-of-office to harvest intelligence about targets",
+        "Block security alert emails"
+      ],
+      "adminImpactNote": null
+    },
+    "OnlineMeetingRecording.Read.All": {
+      "plainEnglish": "Read all Teams meeting recordings",
+      "category": "data_exfiltration",
+      "impactScore": 68,
+      "abuseScenarios": [
+        "Access recordings of all Teams meetings including executive meetings",
+        "Extract sensitive business discussions"
+      ],
+      "adminImpactNote": "Application permission — accesses all meeting recordings"
+    },
+    "ThreatIndicators.ReadWrite.OwnedBy": {
+      "plainEnglish": "Read and write threat indicators on behalf of the app",
+      "category": "data_exfiltration",
+      "impactScore": 60,
+      "abuseScenarios": [
+        "Modify threat intelligence indicators to evade detection",
+        "Create false positive alerts"
+      ],
+      "adminImpactNote": null
+    },
+    "ProgramControl.ReadWrite.All": {
+      "plainEnglish": "Read and write all access review programs",
+      "category": "privilege_escalation",
+      "impactScore": 70,
+      "abuseScenarios": [
+        "Manipulate program structures governing access reviews"
+      ],
+      "adminImpactNote": null
+    },
+    "offline_access": {
+      "plainEnglish": "Maintain access to data you have given access to",
+      "category": "persistence",
+      "impactScore": 45,
+      "abuseScenarios": [
+        "Obtain refresh tokens for persistent, long-lived access",
+        "Access data even after the user's session expires"
+      ],
+      "adminImpactNote": "Enables long-lived token access — risk depends on accompanying scopes"
+    },
+    "openid": {
+      "plainEnglish": "Sign users in (OpenID Connect)",
+      "category": "read_only",
+      "impactScore": 5,
+      "abuseScenarios": [],
+      "adminImpactNote": null
+    },
+    "profile": {
+      "plainEnglish": "View users' basic profile",
+      "category": "read_only",
+      "impactScore": 8,
+      "abuseScenarios": [],
+      "adminImpactNote": null
+    },
+    "email": {
+      "plainEnglish": "View users' email address",
+      "category": "read_only",
+      "impactScore": 10,
+      "abuseScenarios": [],
+      "adminImpactNote": null
+    },
+    "ServicePrincipalEndpoint.ReadWrite.All": {
+      "plainEnglish": "Read and write service principal endpoints",
+      "category": "persistence",
+      "impactScore": 70,
+      "abuseScenarios": [
+        "Modify service principal endpoints to intercept authentication flows"
+      ],
+      "adminImpactNote": null
+    },
+    "Domain.ReadWrite.All": {
+      "plainEnglish": "Read and write domains",
+      "category": "tenant_takeover",
+      "impactScore": 88,
+      "abuseScenarios": [
+        "Add attacker-controlled domain to the tenant for identity spoofing",
+        "Modify federated domain configuration for authentication bypass"
+      ],
+      "adminImpactNote": "Can add domains to the tenant — enables identity spoofing attacks"
+    },
+    "Organization.ReadWrite.All": {
+      "plainEnglish": "Read and write organization information",
+      "category": "tenant_takeover",
+      "impactScore": 85,
+      "abuseScenarios": [
+        "Modify tenant-level security settings",
+        "Change organization branding for phishing"
+      ],
+      "adminImpactNote": null
+    },
+    "ConditionalAccess.ReadWrite.All": {
+      "plainEnglish": "Read and write conditional access policies",
+      "category": "tenant_takeover",
+      "impactScore": 92,
+      "abuseScenarios": [
+        "Disable all Conditional Access policies",
+        "Create exclusion rules to bypass MFA requirements",
+        "Allow access from untrusted locations or devices"
+      ],
+      "adminImpactNote": "Can disable all Conditional Access policies — disables key security controls"
+    },
+    "BitlockerKey.Read.All": {
+      "plainEnglish": "Read all BitLocker keys",
+      "category": "data_exfiltration",
+      "impactScore": 78,
+      "abuseScenarios": [
+        "Obtain BitLocker recovery keys for all managed devices",
+        "Enable unauthorized physical access to encrypted drives"
+      ],
+      "adminImpactNote": null
+    },
+    "UserAuthenticationMethod.ReadWrite.All": {
+      "plainEnglish": "Read and write all users' authentication methods",
+      "category": "privilege_escalation",
+      "impactScore": 95,
+      "abuseScenarios": [
+        "Register attacker-controlled MFA devices for any user",
+        "Remove existing MFA methods to bypass multi-factor authentication",
+        "Take over any user account by modifying authentication methods"
+      ],
+      "adminImpactNote": "Can add MFA devices to any account including Global Admins"
+    },
+    "TeamMember.ReadWrite.All": {
+      "plainEnglish": "Add and remove members from all teams",
+      "category": "lateral_movement",
+      "impactScore": 65,
+      "abuseScenarios": [
+        "Add malicious users or bots to any team",
+        "Remove legitimate members from critical teams"
+      ],
+      "adminImpactNote": null
+    },
+    "ChannelSettings.ReadWrite.All": {
+      "plainEnglish": "Read and write the settings of all channels",
+      "category": "lateral_movement",
+      "impactScore": 55,
+      "abuseScenarios": [
+        "Modify channel settings to enable unauthorized access"
+      ],
+      "adminImpactNote": null
+    }
+  }
+}

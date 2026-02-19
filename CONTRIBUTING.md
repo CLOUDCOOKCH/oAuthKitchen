@@ -1,126 +1,112 @@
 # Contributing to OAuthKitchen
 
-Thank you for your interest in contributing to OAuthKitchen! This document provides guidelines for contributing to the project.
+Thank you for contributing! This document covers how to get set up and where to make changes.
 
 ## Code of Conduct
 
-Please be respectful and constructive in all interactions. We welcome contributors of all backgrounds and experience levels.
+Be respectful and constructive. All contributors are welcome regardless of background or experience level.
 
-## How to Contribute
+## Development Setup
 
-### Reporting Issues
+```bash
+git clone https://github.com/oauthkitchen/oauthkitchen.git
+cd oauthkitchen/web/frontend
+npm install
+npm run dev        # http://localhost:5173
+```
 
-1. Check if the issue already exists
-2. Create a new issue with:
-   - Clear, descriptive title
-   - Steps to reproduce (if bug)
-   - Expected vs actual behavior
-   - Environment details (OS, Python version)
-
-### Submitting Pull Requests
+## Submitting Pull Requests
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/your-feature`)
 3. Make your changes
-4. Run tests (`pytest tests/`)
-5. Run linting (`ruff check src/ tests/`)
-6. Commit with clear messages
-7. Push and create a Pull Request
+4. Run lint and build checks:
+   ```bash
+   npm run lint
+   npm run build
+   npx tsc --noEmit
+   ```
+5. Commit with clear messages
+6. Push and open a Pull Request
 
-### Development Setup
+## Project Structure
 
-```bash
-# Clone your fork
-git clone https://github.com/YOUR_USERNAME/oauthkitchen.git
-cd oauthkitchen
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # or `venv\Scripts\activate` on Windows
-
-# Install in development mode
-pip install -e ".[dev]"
-
-# Run tests
-pytest tests/ -v
-
-# Run linting
-ruff check src/ tests/
-ruff format src/ tests/
+```
+web/frontend/src/
+├── lib/
+│   ├── analyzers/       # Risk scorer, shadow detector, permission translator
+│   ├── api/             # Graph API client and data collectors
+│   │   └── collectors/  # App registrations, service principals, scan orchestrator
+│   ├── store/           # Zustand state stores (settings, scan results)
+│   ├── msalConfig.ts    # MSAL configuration builder
+│   └── utils.ts         # Shared helpers (cn, formatDate, getRiskColor)
+├── types/
+│   └── models.ts        # All TypeScript domain types and interfaces
+├── pages/               # Route-level page components
+├── components/          # Shared UI components
+└── public/
+    └── permissions.json # Permission rules data (add new scopes here)
 ```
 
 ## Areas to Contribute
 
-### Permission Rules
+### Adding Permission Rules
 
-The permission translator rules file (`src/oauthkitchen/rules/permissions.yaml`) is a great place to contribute:
+Edit `web/frontend/public/permissions.json`. Add an object to the array:
 
-1. Add new Microsoft Graph permissions
-2. Improve descriptions and abuse scenarios
-3. Add permissions for other APIs (SharePoint, Exchange, etc.)
-
-Format for new permissions:
-
-```yaml
-microsoft_graph:
-  Permission.Scope.Name:
-    display_name: "Human-readable name"
-    plain_english: "Clear description of what this permission allows"
-    category: data_exfiltration  # See categories below
-    impact_score: 70  # 0-100, be conservative
-    abuse_scenarios:
-      - "Specific way this could be abused"
-      - "Another abuse scenario"
-    admin_impact_note: "Optional: equivalent admin impact"
+```json
+{
+  "scopeName": "Permission.Scope.Name",
+  "plainEnglish": "Clear description of what this permission allows",
+  "category": "data_exfiltration",
+  "impactScore": 70,
+  "abuseScenarios": [
+    "How an attacker could misuse this",
+    "Another abuse scenario"
+  ],
+  "adminImpactNote": "Optional: equivalent admin impact"
+}
 ```
 
-Categories:
-- `read_only` - Generally safe read access
-- `data_exfiltration` - Could extract sensitive data
-- `privilege_escalation` - Could gain elevated access
-- `tenant_takeover` - Could lead to full tenant compromise
-- `persistence` - Could maintain long-term access
-- `lateral_movement` - Could access other resources/users
+Categories: `read_only` · `data_exfiltration` · `privilege_escalation` · `tenant_takeover` · `persistence` · `lateral_movement`
 
-### Code Contributions
+### Improving Analyzers
 
-Areas that could use improvement:
-- Additional output formats
-- Performance optimizations
-- Better error handling
-- Documentation improvements
-- Additional detection rules
+- **Risk scorer** — `src/lib/analyzers/scoring.ts`: adjust factor weights or add new scoring factors
+- **Shadow detector** — `src/lib/analyzers/shadow.ts`: add new detection patterns, each producing a `ShadowOAuthFinding`
+- **Translator** — `src/lib/analyzers/translator.ts`: update rule loading or lookup logic
 
-### Testing
+### UI / Pages
 
-- Add tests for new features
-- Improve test coverage
-- Add integration tests (mocked Graph API)
+- **Stack**: React 18 + TypeScript, Radix UI, Tailwind CSS, Lucide React icons
+- Use the `cn()` helper from `src/lib/utils.ts` to compose Tailwind classes
+- No inline styles — Tailwind classes only
+- No `any` types; explicit return types on exported functions
+
+### Graph API Collectors
+
+Add new data collection in `src/lib/api/collectors/`. Each collector receives a `GraphClient` instance and returns normalized domain types from `src/types/models.ts`.
 
 ## Code Style
 
-- Follow PEP 8
-- Use type hints
-- Write docstrings for public functions
-- Keep functions focused and small
-- Add comments for complex logic
+- TypeScript strict mode — no `any`, explicit return types on exports
+- ESLint enforced — zero warnings (`npm run lint`)
+- Tailwind for all styling
+- Lucide React for icons only
 
 ## Commit Messages
 
-Use clear, descriptive commit messages:
-
 ```
-feat: Add support for SharePoint permissions
-fix: Handle empty permission grants correctly
-docs: Update README with new CLI options
-test: Add tests for scoring engine
-refactor: Simplify permission translation logic
+feat: add SharePoint permission rules
+fix: handle empty permission grants in scorer
+docs: update contributing guide
+refactor: simplify shadow detection logic
 ```
 
 ## Questions?
 
-Open an issue with the "question" label if you need help or clarification.
+Open an issue with the "question" label.
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the MIT License.
+By contributing, you agree your contributions will be licensed under the MIT License.
