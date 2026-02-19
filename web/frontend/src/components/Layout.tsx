@@ -53,12 +53,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="flex h-full flex-col">
           {/* Logo */}
           <div className="flex items-center gap-3 px-6 py-5 border-b border-border/50">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-              <Shield className="h-6 w-6 text-primary" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 gradient-border amber-glow">
+              <Shield className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-lg font-bold">OAuthKitchen</h1>
-              <p className="text-xs text-muted-foreground">Security Analysis</p>
+              <h1 className="text-base font-mono font-semibold tracking-tight">OAuthKitchen</h1>
+              <p className="text-xs text-muted-foreground terminal-cursor">Security Analysis</p>
             </div>
             <button className="ml-auto lg:hidden" onClick={() => setSidebarOpen(false)}>
               <X className="h-5 w-5" />
