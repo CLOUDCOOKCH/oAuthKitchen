@@ -11,6 +11,7 @@ import ScanDetail from '@/pages/ScanDetail'
 import Permissions from '@/pages/Permissions'
 import Settings from '@/pages/Settings'
 import Login from '@/pages/Login'
+import Landing from '@/pages/Landing'
 
 // ============================================================================
 // PROTECTED ROUTE
@@ -45,6 +46,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function AppRoutes() {
   return (
     <Routes>
+      <Route path="/landing" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/settings" element={<Settings />} />
       <Route
@@ -100,11 +102,14 @@ export default function App() {
     }
   }, [settings.clientId, settings.tenantId, isConfigured])
 
-  // Not configured → send to settings
+  // Not configured → landing page, settings accessible
   if (!isConfigured) {
     return (
       <Routes>
-        <Route path="*" element={<Settings />} />
+        <Route path="/"        element={<Landing />} />
+        <Route path="/landing" element={<Landing />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="*"        element={<Navigate to="/" replace />} />
       </Routes>
     )
   }
