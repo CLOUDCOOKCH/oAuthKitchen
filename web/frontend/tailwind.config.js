@@ -66,6 +66,10 @@ export default {
           foreground: "#ffffff",
         },
       },
+      fontFamily: {
+        sans: ['Syne', 'system-ui', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'Menlo', 'Monaco', 'monospace'],
+      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
