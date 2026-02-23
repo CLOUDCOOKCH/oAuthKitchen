@@ -41,7 +41,7 @@ export default function Settings() {
           const raw = e.target.value
           setForm((prev) => ({
             ...prev,
-            [key]: type === 'number' ? (parseInt(raw) || 0) : raw,
+            [key]: type === 'number' ? (parseInt(raw, 10) || 0) : raw,
           }))
         }}
       />

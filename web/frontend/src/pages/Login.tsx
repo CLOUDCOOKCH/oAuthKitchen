@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Shield, Loader2 } from 'lucide-react'
@@ -14,6 +14,7 @@ export default function Login() {
   const isAuthenticated = useIsAuthenticated()
   const navigate = useNavigate()
   const { settings } = useSettingsStore()
+  const [loginError, setLoginError] = useState<string | null>(null)
 
   useEffect(() => {
     if (isAuthenticated) navigate('/', { replace: true })
@@ -25,11 +26,15 @@ export default function Login() {
     inProgress === InteractionStatus.HandleRedirect
 
   const handleSignIn = async () => {
+    setLoginError(null)
     const scopes = settings.useLimitedScopes ? GRAPH_SCOPES_LIMITED : GRAPH_SCOPES_FULL
     try {
       await instance.loginPopup({ scopes })
     } catch (err) {
-      console.error('Login failed:', err)
+      const msg = err instanceof Error ? err.message : String(err)
+      if (!msg.includes('user_cancelled') && !msg.includes('BrowserAuthError: interaction_in_progress')) {
+        setLoginError(msg)
+      }
     }
   }
 
@@ -82,6 +87,12 @@ export default function Login() {
               )}
               {isLoading ? 'Signing in…' : 'Sign in with Microsoft'}
             </Button>
+
+            {loginError && (
+              <div className="rounded border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-400 font-mono">
+                {loginError}
+              </div>
+            )}
 
             <div className="rounded border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground space-y-1 font-mono">
               <p className="font-medium text-foreground">Required Graph permissions</p>

@@ -51,10 +51,11 @@ class Logger {
     const timestamp = entry.timestamp.toISOString()
     const prefix = `[${timestamp}] [${level.toUpperCase()}] [${this.module}]`
 
+    const consoleFn = (console[level] as (...args: unknown[]) => void).bind(console)
     if (context) {
-      console[level](`${prefix} ${message}`, context)
+      consoleFn(`${prefix} ${message}`, context)
     } else {
-      console[level](`${prefix} ${message}`)
+      consoleFn(`${prefix} ${message}`)
     }
   }
 

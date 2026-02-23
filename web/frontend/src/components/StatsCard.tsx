@@ -37,6 +37,14 @@ export default function StatsCard({
     low: 'text-green-500',
   }
 
+  const iconBgColors = {
+    default: 'bg-amber-500/10',
+    critical: 'bg-red-500/10',
+    high: 'bg-orange-500/10',
+    medium: 'bg-yellow-500/10',
+    low: 'bg-green-500/10',
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -66,10 +74,7 @@ export default function StatsCard({
           )}
         </div>
         <div
-          className={cn(
-            'rounded-lg p-2.5',
-            variant === 'default' ? 'bg-amber-500/10' : `bg-${variant}-500/10`
-          )}
+          className={cn('rounded-lg p-2.5', iconBgColors[variant])}
         >
           <Icon className={cn('h-5 w-5', iconColors[variant])} />
         </div>
