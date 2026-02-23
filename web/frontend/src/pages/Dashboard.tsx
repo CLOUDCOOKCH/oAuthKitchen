@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
@@ -34,6 +35,33 @@ const PIE_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#6b7280']
 export default function Dashboard() {
   const { currentScan, scanHistory } = useScanStore()
 
+  const topRisky = useMemo(
+    () => (currentScan ? getTopRiskyApps(currentScan) : []),
+    [currentScan]
+  )
+
+  const { pieData, barData } = useMemo(() => {
+    if (!currentScan) return { pieData: [], barData: [] }
+    const findingsByType: Record<string, number> = {}
+    for (const finding of currentScan.shadowFindings || []) {
+      const label = finding.findingType.replace(/_/g, ' ')
+      findingsByType[label] = (findingsByType[label] || 0) + 1
+    }
+    const pd = Object.entries(findingsByType).map(([name, value]) => ({ name, value }))
+    const riskDist = { critical: 0, high: 0, medium: 0, low: 0 }
+    for (const score of Object.values(currentScan.riskScores || {})) {
+      const level = score.riskLevel as keyof typeof riskDist
+      if (level in riskDist) riskDist[level]++
+    }
+    const bd = [
+      { name: 'Critical', value: riskDist.critical, fill: '#ef4444' },
+      { name: 'High', value: riskDist.high, fill: '#f97316' },
+      { name: 'Medium', value: riskDist.medium, fill: '#eab308' },
+      { name: 'Low', value: riskDist.low, fill: '#22c55e' },
+    ]
+    return { pieData: pd, barData: bd }
+  }, [currentScan])
+
   if (!currentScan) {
     return (
       <div className="space-y-6">
@@ -65,27 +93,6 @@ export default function Dashboard() {
       </div>
     )
   }
-
-  const topRisky = getTopRiskyApps(currentScan)
-
-  const findingsByType: Record<string, number> = {}
-  for (const finding of currentScan.shadowFindings || []) {
-    const label = finding.findingType.replace(/_/g, ' ')
-    findingsByType[label] = (findingsByType[label] || 0) + 1
-  }
-  const pieData = Object.entries(findingsByType).map(([name, value]) => ({ name, value }))
-
-  const riskDist = { critical: 0, high: 0, medium: 0, low: 0 }
-  for (const score of Object.values(currentScan.riskScores || {})) {
-    const level = score.riskLevel as keyof typeof riskDist
-    if (level in riskDist) riskDist[level]++
-  }
-  const barData = [
-    { name: 'Critical', value: riskDist.critical, fill: '#ef4444' },
-    { name: 'High', value: riskDist.high, fill: '#f97316' },
-    { name: 'Medium', value: riskDist.medium, fill: '#eab308' },
-    { name: 'Low', value: riskDist.low, fill: '#22c55e' },
-  ]
 
   return (
     <div className="space-y-6">

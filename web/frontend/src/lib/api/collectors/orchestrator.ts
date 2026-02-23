@@ -21,7 +21,7 @@ import { getLogger } from '@/lib/utils/logger'
 
 const logger = getLogger('orchestrator')
 
-export type ProgressCallback = (message: string) => void
+export type ProgressCallback = (message: string, pct?: number) => void
 
 export interface ScanOptions {
   inactiveDaysThreshold?: number
@@ -96,7 +96,7 @@ export async function runScan(
   // -------------------------------------------------------------------
   // STEP 1: Detect capabilities
   // -------------------------------------------------------------------
-  onProgress('Detecting tenant capabilities…')
+  onProgress('Detecting tenant capabilities…', 5)
   await client.detectCapabilities()
   const includeSignIn = client.signInLogsAvailable
   logger.info(`Sign-in activity available: ${includeSignIn}`)
@@ -104,15 +104,15 @@ export async function runScan(
   // -------------------------------------------------------------------
   // STEP 2: Load permission rules
   // -------------------------------------------------------------------
-  onProgress('Loading permission rules…')
+  onProgress('Loading permission rules…', 10)
   await permissionTranslator.loadRules()
 
   // -------------------------------------------------------------------
   // STEP 3: Collect application registrations
   // -------------------------------------------------------------------
-  onProgress('Collecting application registrations…')
+  onProgress('Collecting application registrations…', 15)
   const applications = await collectApplications(client)
-  onProgress(`Found ${applications.length} application registrations`)
+  onProgress(`Collected ${applications.length} app registrations`, 30)
 
   // Build appId → Application lookup for linking
   const appMap = new Map(applications.map((a) => [a.appId, a]))
@@ -120,19 +120,19 @@ export async function runScan(
   // -------------------------------------------------------------------
   // STEP 4: Collect service principals
   // -------------------------------------------------------------------
-  onProgress('Collecting service principals (enterprise apps)…')
+  onProgress('Collecting service principals (enterprise apps)…', 35)
   const servicePrincipals = await collectServicePrincipals(
     client,
     tenantId,
     appMap,
     includeSignIn
   )
-  onProgress(`Found ${servicePrincipals.length} service principals`)
+  onProgress(`Collected ${servicePrincipals.length} service principals`, 65)
 
   // -------------------------------------------------------------------
   // STEP 5: Risk scoring
   // -------------------------------------------------------------------
-  onProgress('Running risk scoring…')
+  onProgress('Scoring risk for all apps…', 70)
   const scorer = new RiskScorer({
     inactiveDaysThreshold,
     credentialExpiryCriticalDays,
@@ -148,21 +148,21 @@ export async function runScan(
   // -------------------------------------------------------------------
   // STEP 6: Shadow OAuth detection
   // -------------------------------------------------------------------
-  onProgress('Running shadow OAuth detection…')
+  onProgress('Detecting shadow OAuth patterns…', 80)
   const detector = new ShadowOAuthDetector(includeRemediation, inactiveDaysThreshold)
   const shadowFindings = detector.detect(servicePrincipals)
-  onProgress(`Found ${shadowFindings.length} shadow OAuth findings`)
+  onProgress(`Found ${shadowFindings.length} shadow findings`, 88)
 
   // -------------------------------------------------------------------
   // STEP 7: Credential expiry analysis
   // -------------------------------------------------------------------
-  onProgress('Checking credential expiry…')
+  onProgress('Checking credential expiry…', 92)
   const credentialFindings = collectCredentialFindings(applications, credentialExpiryCriticalDays)
 
   // -------------------------------------------------------------------
   // STEP 8: Compute statistics
   // -------------------------------------------------------------------
-  onProgress('Computing statistics…')
+  onProgress('Computing statistics…', 97)
 
   let criticalCount = 0
   let highRiskCount = 0
@@ -181,7 +181,7 @@ export async function runScan(
     (f) => f.expiresInDays >= 0 && f.expiresInDays <= 30
   ).length
 
-  onProgress('Scan complete!')
+  onProgress('Scan complete!', 100)
 
   return {
     tenantId,

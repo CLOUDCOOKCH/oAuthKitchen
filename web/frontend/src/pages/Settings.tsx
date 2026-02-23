@@ -1,12 +1,23 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Shield, Save, RotateCcw, ExternalLink } from 'lucide-react'
+import { Shield, Save, RotateCcw, ExternalLink, CheckCircle, XCircle } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useSettingsStore } from '@/lib/store'
 import type { AppSettings } from '@/lib/store/settingsStore'
+
+const GUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function isValidClientId(v: string)  { return !v || GUID_RE.test(v) }
+function isValidTenantId(v: string)  { return !v || v === 'organizations' || GUID_RE.test(v) }
+
+const THRESHOLD_PRESETS = [
+  { label: 'Strict',   inactive: 60,  expiry: 14 },
+  { label: 'Standard', inactive: 90,  expiry: 7  },
+  { label: 'Lenient',  inactive: 180, expiry: 3  },
+] as const
 
 export default function Settings() {
   const navigate = useNavigate()
@@ -92,20 +103,47 @@ export default function Settings() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {field(
-            'clientId',
-            'Client ID (Application ID)',
-            'The Application (client) ID from your App Registration.',
-            'text',
-            'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
-          )}
-          {field(
-            'tenantId',
-            'Tenant ID (Directory ID)',
-            'Your Azure AD Directory (tenant) ID, or "organizations" for any work account.',
-            'text',
-            'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
-          )}
+          {/* Client ID with GUID validation */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <label className="text-sm font-medium">Client ID (Application ID)</label>
+              {form.clientId && (isValidClientId(form.clientId)
+                ? <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                : <XCircle className="h-3.5 w-3.5 text-red-500" />)}
+            </div>
+            <p className="text-xs text-muted-foreground">The Application (client) ID from your App Registration.</p>
+            <Input
+              type="text"
+              value={form.clientId}
+              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+              className={form.clientId && !isValidClientId(form.clientId) ? 'border-red-500/50' : ''}
+              onChange={(e) => setForm((prev) => ({ ...prev, clientId: e.target.value }))}
+            />
+            {form.clientId && !isValidClientId(form.clientId) && (
+              <p className="text-xs text-red-500">Must be a valid GUID (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)</p>
+            )}
+          </div>
+
+          {/* Tenant ID with GUID / "organizations" validation */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <label className="text-sm font-medium">Tenant ID (Directory ID)</label>
+              {form.tenantId && (isValidTenantId(form.tenantId)
+                ? <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                : <XCircle className="h-3.5 w-3.5 text-red-500" />)}
+            </div>
+            <p className="text-xs text-muted-foreground">Your Azure AD Directory (tenant) ID, or "organizations" for any work account.</p>
+            <Input
+              type="text"
+              value={form.tenantId}
+              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+              className={form.tenantId && !isValidTenantId(form.tenantId) ? 'border-red-500/50' : ''}
+              onChange={(e) => setForm((prev) => ({ ...prev, tenantId: e.target.value }))}
+            />
+            {form.tenantId && !isValidTenantId(form.tenantId) && (
+              <p className="text-xs text-red-500">Must be a valid GUID or "organizations"</p>
+            )}
+          </div>
 
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Scope mode</label>
@@ -142,6 +180,36 @@ export default function Settings() {
           <CardDescription>Tune when apps are flagged as inactive or credentials as critical.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Threshold presets */}
+          <div className="space-y-1.5">
+            <p className="text-sm font-medium">Presets</p>
+            <div className="flex gap-2">
+              {THRESHOLD_PRESETS.map((p) => {
+                const active =
+                  form.inactiveDaysThreshold === p.inactive &&
+                  form.credentialExpiryCriticalDays === p.expiry
+                return (
+                  <button
+                    key={p.label}
+                    onClick={() =>
+                      setForm((prev) => ({
+                        ...prev,
+                        inactiveDaysThreshold: p.inactive,
+                        credentialExpiryCriticalDays: p.expiry,
+                      }))
+                    }
+                    className={`flex-1 rounded-lg border p-2.5 text-center transition-colors ${
+                      active ? 'border-primary bg-primary/5' : 'border-border hover:bg-accent/50'
+                    }`}
+                  >
+                    <p className="text-xs font-medium">{p.label}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{p.inactive}d / {p.expiry}d</p>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
           {field(
             'inactiveDaysThreshold',
             'Inactive app threshold (days)',

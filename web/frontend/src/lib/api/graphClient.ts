@@ -77,19 +77,32 @@ export class GraphClient {
     const fullUrl = url.startsWith('https://') ? url : `${GRAPH_BASE}${url}`
 
     logger.debug(`GET ${fullUrl}`)
-    const response = await fetch(fullUrl, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        ConsistencyLevel: 'eventual',
-      },
-    })
 
-    if (!response.ok) {
-      const body = await response.text().catch(() => '')
-      throw new Error(`Graph API ${response.status} on ${fullUrl}: ${body}`)
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const response = await fetch(fullUrl, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ConsistencyLevel: 'eventual',
+        },
+      })
+
+      if (response.status === 429 || response.status === 503) {
+        const retryAfter = parseInt(response.headers.get('Retry-After') ?? '0', 10)
+        const delay = retryAfter > 0 ? retryAfter * 1000 : 2 ** (attempt + 1) * 1000
+        logger.warn(`Rate limited (${response.status}) on ${fullUrl} — retry ${attempt + 1}/3 in ${delay}ms`)
+        await new Promise<void>((r) => setTimeout(r, delay))
+        continue
+      }
+
+      if (!response.ok) {
+        const body = await response.text().catch(() => '')
+        throw new Error(`Graph API ${response.status} on ${fullUrl}: ${body}`)
+      }
+
+      return response.json() as Promise<T>
     }
 
-    return response.json() as Promise<T>
+    throw new Error(`Graph API still rate-limited after 3 retries on ${fullUrl}`)
   }
 
   async get<T>(path: string, useFullScopes = false): Promise<T> {
