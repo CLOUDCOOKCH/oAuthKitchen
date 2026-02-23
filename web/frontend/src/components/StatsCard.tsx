@@ -22,7 +22,7 @@ export default function StatsCard({
   delay = 0,
 }: StatsCardProps) {
   const variants = {
-    default: 'from-blue-500/10 to-purple-500/10 border-blue-500/20',
+    default: 'from-amber-500/10 to-orange-500/10 border-amber-500/20',
     critical: 'from-red-500/10 to-red-600/10 border-red-500/20',
     high: 'from-orange-500/10 to-orange-600/10 border-orange-500/20',
     medium: 'from-yellow-500/10 to-yellow-600/10 border-yellow-500/20',
@@ -30,11 +30,19 @@ export default function StatsCard({
   }
 
   const iconColors = {
-    default: 'text-blue-500',
+    default: 'text-amber-500',
     critical: 'text-red-500',
     high: 'text-orange-500',
     medium: 'text-yellow-500',
     low: 'text-green-500',
+  }
+
+  const iconBgColors = {
+    default: 'bg-amber-500/10',
+    critical: 'bg-red-500/10',
+    high: 'bg-orange-500/10',
+    medium: 'bg-yellow-500/10',
+    low: 'bg-green-500/10',
   }
 
   return (
@@ -66,10 +74,7 @@ export default function StatsCard({
           )}
         </div>
         <div
-          className={cn(
-            'rounded-lg p-2.5',
-            variant === 'default' ? 'bg-blue-500/10' : `bg-${variant}-500/10`
-          )}
+          className={cn('rounded-lg p-2.5', iconBgColors[variant])}
         >
           <Icon className={cn('h-5 w-5', iconColors[variant])} />
         </div>
@@ -80,7 +85,7 @@ export default function StatsCard({
         className={cn(
           'absolute -right-8 -top-8 h-24 w-24 rounded-full opacity-20 blur-2xl',
           variant === 'default'
-            ? 'bg-blue-500'
+            ? 'bg-amber-500'
             : variant === 'critical'
             ? 'bg-red-500'
             : variant === 'high'

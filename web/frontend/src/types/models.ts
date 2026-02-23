@@ -187,9 +187,11 @@ export interface RiskFactor {
   details?: string | null
 }
 
+export type RiskLevel = 'critical' | 'high' | 'medium' | 'low'
+
 export interface RiskScore {
   totalScore: number
-  riskLevel: string
+  riskLevel: RiskLevel
   factors?: RiskFactor[]
 }
 

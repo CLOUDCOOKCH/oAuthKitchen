@@ -12,6 +12,7 @@ import Permissions from '@/pages/Permissions'
 import Settings from '@/pages/Settings'
 import Login from '@/pages/Login'
 import Landing from '@/pages/Landing'
+import Tenants from '@/pages/Tenants'
 
 // ============================================================================
 // PROTECTED ROUTE
@@ -46,19 +47,22 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/landing" element={<Landing />} />
-      <Route path="/login" element={<Login />} />
+      <Route path="/landing"  element={<Landing />} />
+      <Route path="/login"    element={<Login />} />
       <Route path="/settings" element={<Settings />} />
+      <Route path="/tenants"  element={<Tenants />} />
       <Route
         path="/*"
         element={
           <ProtectedRoute>
             <Layout>
               <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/scans" element={<Scans />} />
-                <Route path="/scans/:id" element={<ScanDetail />} />
+                <Route path="/"           element={<Dashboard />} />
+                <Route path="/scans"      element={<Scans />} />
+                <Route path="/scans/:id"  element={<ScanDetail />} />
                 <Route path="/permissions" element={<Permissions />} />
+                {/* Unknown paths inside the app redirect to the dashboard */}
+                <Route path="*"           element={<Navigate to="/" replace />} />
               </Routes>
             </Layout>
           </ProtectedRoute>

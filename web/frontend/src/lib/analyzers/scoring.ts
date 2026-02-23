@@ -9,6 +9,7 @@ import {
   type Application,
   type RiskScore,
   type RiskFactor,
+  type RiskLevel,
   AppType,
   ConsentType,
   getAllDelegatedScopes,
@@ -57,7 +58,7 @@ export const DEFAULT_SCORING_WEIGHTS: ScoringWeights = {
 // HELPERS
 // ============================================================================
 
-export function getRiskLevel(score: number): string {
+export function getRiskLevel(score: number): RiskLevel {
   if (score >= 80) return 'critical'
   if (score >= 60) return 'high'
   if (score >= 40) return 'medium'

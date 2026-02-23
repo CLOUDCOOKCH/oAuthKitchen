@@ -42,7 +42,7 @@ function collectCredentialFindings(
   for (const app of applications) {
     for (const cred of getAllCredentials(app)) {
       const days = getDaysUntilExpiry(cred)
-      if (days === null) continue
+      if (days === null || !cred.endDatetime) continue
 
       let severity: string
       if (days < 0) {
@@ -65,7 +65,7 @@ function collectCredentialFindings(
         credentialType: cred.credentialType,
         credentialName: cred.displayName,
         expiresInDays: days,
-        expiryDate: cred.endDatetime!,
+        expiryDate: cred.endDatetime,
         severity,
       })
     }

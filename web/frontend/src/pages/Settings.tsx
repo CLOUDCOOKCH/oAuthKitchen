@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Shield, Save, RotateCcw, ExternalLink } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,14 +9,20 @@ import { useSettingsStore } from '@/lib/store'
 import type { AppSettings } from '@/lib/store/settingsStore'
 
 export default function Settings() {
+  const navigate = useNavigate()
   const { settings, updateSettings, isConfigured } = useSettingsStore()
   const [form, setForm] = useState<AppSettings>({ ...settings })
   const [saved, setSaved] = useState(false)
 
   const handleSave = () => {
+    const completingFirstSetup = !isConfigured && Boolean(form.clientId && form.tenantId)
     updateSettings(form)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
+    // First-time setup: navigate to /login once the store update triggers MSAL init
+    if (completingFirstSetup) {
+      setTimeout(() => navigate('/login'), 150)
+    }
   }
 
   const handleReset = () => {
@@ -34,7 +41,7 @@ export default function Settings() {
           const raw = e.target.value
           setForm((prev) => ({
             ...prev,
-            [key]: type === 'number' ? (parseInt(raw) || 0) : raw,
+            [key]: type === 'number' ? (parseInt(raw, 10) || 0) : raw,
           }))
         }}
       />
@@ -181,7 +188,7 @@ export default function Settings() {
               </li>
               <li className="flex items-center gap-2">
                 <span className="h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />
-                Redirect URI: <code className="text-xs">{window.location.origin}</code>
+                Redirect URI: <code className="text-xs">{window.location.origin + import.meta.env.BASE_URL}</code>
               </li>
             </ul>
           </div>
