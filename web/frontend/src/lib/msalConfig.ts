@@ -5,12 +5,16 @@ import type { Configuration } from '@azure/msal-browser'
  * tenantId can be a GUID, 'organizations' (any work account), or 'common' (any account).
  */
 export function buildMsalConfig(clientId: string, tenantId: string): Configuration {
+  // Include BASE_URL so the registered redirect URI matches on GitHub Pages subdirectory deploys.
+  // On localhost BASE_URL is '/', so `origin + '/'` = 'http://localhost:5173/'  which MSAL accepts.
+  const redirectUri = window.location.origin + import.meta.env.BASE_URL
+
   return {
     auth: {
       clientId,
       authority: `https://login.microsoftonline.com/${tenantId || 'organizations'}`,
-      redirectUri: window.location.origin,
-      postLogoutRedirectUri: window.location.origin,
+      redirectUri,
+      postLogoutRedirectUri: redirectUri,
     },
     cache: {
       cacheLocation: 'sessionStorage',
