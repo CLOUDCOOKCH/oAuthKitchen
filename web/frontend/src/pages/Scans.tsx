@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   ShieldX,
   ShieldAlert,
+  RefreshCw,
 } from 'lucide-react'
 import { useMsal, useAccount } from '@azure/msal-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -27,6 +28,7 @@ export default function Scans() {
     scanHistory,
     isScanning,
     scanProgress,
+    scanPct,
     scanError,
     setCurrentScan,
     setIsScanning,
@@ -41,7 +43,7 @@ export default function Scans() {
 
     setIsScanning(true)
     setScanError(null)
-    setScanProgress('Starting scan…')
+    setScanProgress('Starting scan…', 0)
 
     const scanId = crypto.randomUUID()
     const startedAt = new Date().toISOString()
@@ -54,9 +56,9 @@ export default function Scans() {
         {
           inactiveDaysThreshold: settings.inactiveDaysThreshold,
           credentialExpiryCriticalDays: settings.credentialExpiryCriticalDays,
-          includeRemediation: false,
+          includeRemediation: true,
         },
-        (msg) => setScanProgress(msg)
+        (msg, pct) => setScanProgress(msg, pct)
       )
 
       setCurrentScan(result)
@@ -131,19 +133,32 @@ export default function Scans() {
                 </div>
 
                 {isScanning && (
-                  <div className="flex items-center gap-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
-                    <Loader2 className="h-5 w-5 animate-spin text-primary flex-shrink-0" />
-                    <p className="text-sm">{scanProgress || 'Running…'}</p>
+                  <div className="space-y-2 p-4 rounded-lg bg-primary/5 border border-primary/20">
+                    <div className="flex items-center gap-3">
+                      <Loader2 className="h-4 w-4 animate-spin text-primary flex-shrink-0" />
+                      <p className="text-sm flex-1">{scanProgress || 'Running…'}</p>
+                      <span className="text-xs text-muted-foreground font-mono">{scanPct}%</span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-primary/10 overflow-hidden">
+                      <div
+                        className="h-full bg-primary rounded-full transition-all duration-500"
+                        style={{ width: `${scanPct}%` }}
+                      />
+                    </div>
                   </div>
                 )}
 
                 {scanError && (
                   <div className="flex items-start gap-3 p-4 rounded-lg bg-red-500/10 border border-red-500/20">
                     <XCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-                    <div>
+                    <div className="flex-1">
                       <p className="text-sm font-medium text-red-500">Scan failed</p>
                       <p className="text-xs text-muted-foreground mt-1">{scanError}</p>
                     </div>
+                    <Button variant="outline" size="sm" onClick={handleStartScan} disabled={isScanning || !account}>
+                      <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                      Retry
+                    </Button>
                   </div>
                 )}
 

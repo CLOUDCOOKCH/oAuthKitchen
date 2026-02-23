@@ -21,11 +21,12 @@ interface ScanState {
   scanHistory: ScanSummary[]
   isScanning: boolean
   scanProgress: string
+  scanPct: number
   scanError: string | null
 
   setCurrentScan: (result: AnalysisResult) => void
   setIsScanning: (scanning: boolean) => void
-  setScanProgress: (progress: string) => void
+  setScanProgress: (progress: string, pct?: number) => void
   setScanError: (error: string | null) => void
   addToHistory: (summary: ScanSummary) => void
   clearHistory: () => void
@@ -38,11 +39,13 @@ export const useScanStore = create<ScanState>()(
       scanHistory: [],
       isScanning: false,
       scanProgress: '',
+      scanPct: 0,
       scanError: null,
 
       setCurrentScan: (result) => set({ currentScan: result }),
       setIsScanning: (scanning) => set({ isScanning: scanning }),
-      setScanProgress: (progress) => set({ scanProgress: progress }),
+      setScanProgress: (progress, pct) =>
+        set((s) => ({ scanProgress: progress, scanPct: pct ?? s.scanPct })),
       setScanError: (error) => set({ scanError: error }),
       addToHistory: (summary) =>
         set((state) => ({

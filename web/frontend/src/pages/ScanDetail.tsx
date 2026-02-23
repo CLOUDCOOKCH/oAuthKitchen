@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
@@ -9,6 +9,8 @@ import {
   Search,
   ChevronDown,
   ChevronUp,
+  Download,
+  Lightbulb,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -19,14 +21,116 @@ import { useScanStore } from '@/lib/store'
 import { getTopRiskyApps } from '@/types/models'
 import { formatDate, cn, getRiskColor } from '@/lib/utils'
 
+// ---------------------------------------------------------------------------
+// HELPERS
+// ---------------------------------------------------------------------------
+
+const SEVERITY_RANK: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 }
+const SEVERITY_CHIPS = ['critical', 'high', 'medium', 'low'] as const
+
+function exportCSV(rows: (string | number)[][], filename: string) {
+  const csv = rows
+    .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','))
+    .join('\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 type Tab = 'findings' | 'apps' | 'credentials'
+
+// ---------------------------------------------------------------------------
+// COMPONENT
+// ---------------------------------------------------------------------------
 
 export default function ScanDetail() {
   const { currentScan } = useScanStore()
   const [activeTab, setActiveTab] = useState<Tab>('findings')
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [severityFilter, setSeverityFilter] = useState('')
   const [expandedApp, setExpandedApp] = useState<string | null>(null)
 
+  // Debounce search 200 ms
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 200)
+    return () => clearTimeout(t)
+  }, [search])
+
+  // Reset severity filter when switching tabs
+  useEffect(() => {
+    setSeverityFilter('')
+  }, [activeTab])
+
+  // All useMemo hooks must be unconditional — guard against null currentScan here
+  const topRisky = useMemo(
+    () => (currentScan ? getTopRiskyApps(currentScan) : []),
+    [currentScan]
+  )
+
+  const findings = useMemo(
+    () => currentScan?.shadowFindings ?? [],
+    [currentScan]
+  )
+
+  const credFindings = useMemo(
+    () => currentScan?.credentialFindings ?? [],
+    [currentScan]
+  )
+
+  const sortedFindings = useMemo(
+    () =>
+      [...findings].sort(
+        (a, b) => (SEVERITY_RANK[a.severity] ?? 4) - (SEVERITY_RANK[b.severity] ?? 4)
+      ),
+    [findings]
+  )
+
+  const filteredFindings = useMemo(
+    () =>
+      sortedFindings.filter(
+        (f) =>
+          (!severityFilter || f.severity === severityFilter) &&
+          (!debouncedSearch ||
+            f.servicePrincipalName.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+            f.title.toLowerCase().includes(debouncedSearch.toLowerCase()))
+      ),
+    [sortedFindings, severityFilter, debouncedSearch]
+  )
+
+  const sortedCreds = useMemo(
+    () =>
+      [...credFindings].sort(
+        (a, b) => (SEVERITY_RANK[a.severity] ?? 4) - (SEVERITY_RANK[b.severity] ?? 4)
+      ),
+    [credFindings]
+  )
+
+  const filteredApps = useMemo(
+    () =>
+      topRisky.filter(
+        ([sp, score]) =>
+          (!severityFilter || score.riskLevel === severityFilter) &&
+          (!debouncedSearch || sp.displayName.toLowerCase().includes(debouncedSearch.toLowerCase()))
+      ),
+    [topRisky, severityFilter, debouncedSearch]
+  )
+
+  const filteredCreds = useMemo(
+    () =>
+      sortedCreds.filter(
+        (c) =>
+          (!severityFilter || c.severity === severityFilter) &&
+          (!debouncedSearch || c.appName.toLowerCase().includes(debouncedSearch.toLowerCase()))
+      ),
+    [sortedCreds, severityFilter, debouncedSearch]
+  )
+
+  // Early return after all hooks
   if (!currentScan) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4">
@@ -40,32 +144,58 @@ export default function ScanDetail() {
     )
   }
 
-  const topRisky = getTopRiskyApps(currentScan)
-  const findings = currentScan.shadowFindings || []
-  const credFindings = currentScan.credentialFindings || []
-
-  const filteredFindings = findings.filter(
-    (f) =>
-      f.servicePrincipalName.toLowerCase().includes(search.toLowerCase()) ||
-      f.title.toLowerCase().includes(search.toLowerCase())
-  )
-
-  const filteredApps = topRisky.filter(([sp]) =>
-    sp.displayName.toLowerCase().includes(search.toLowerCase())
-  )
-
-  const filteredCreds = credFindings.filter((c) =>
-    c.appName.toLowerCase().includes(search.toLowerCase())
-  )
-
-  const severityColor = (severity: string) => {
+  const severityBorder = (severity: string) => {
     switch (severity) {
       case 'critical': return 'border-red-500/30 bg-red-500/5'
-      case 'high': return 'border-orange-500/30 bg-orange-500/5'
-      case 'medium': return 'border-yellow-500/30 bg-yellow-500/5'
-      default: return 'border-green-500/30 bg-green-500/5'
+      case 'high':     return 'border-orange-500/30 bg-orange-500/5'
+      case 'medium':   return 'border-yellow-500/30 bg-yellow-500/5'
+      default:         return 'border-green-500/30 bg-green-500/5'
     }
   }
+
+  const chipActive = (s: string) =>
+    s === 'critical' ? 'bg-red-500 text-white border-red-500'
+    : s === 'high'   ? 'bg-orange-500 text-white border-orange-500'
+    : s === 'medium' ? 'bg-yellow-500 text-white border-yellow-500'
+    :                  'bg-green-500 text-white border-green-500'
+
+  // CSV export handlers
+  const handleExportFindings = () => {
+    const hdrs = ['Title', 'Severity', 'App Name', 'Finding Type', 'Affected Scopes', 'Users', 'Description', 'Recommendation']
+    const rows = filteredFindings.map((f) => [
+      f.title, f.severity, f.servicePrincipalName, f.findingType,
+      (f.affectedScopes || []).join('; '),
+      f.affectedUserCount ?? '',
+      f.description,
+      f.recommendation ?? '',
+    ])
+    exportCSV([hdrs, ...rows], `findings-${currentScan.tenantId}-${Date.now()}.csv`)
+  }
+
+  const handleExportApps = () => {
+    const hdrs = ['App Name', 'App Type', 'Risk Score', 'Risk Level', 'Risk Factors']
+    const rows = filteredApps.map(([sp, score]) => [
+      sp.displayName,
+      sp.appType?.replace(/_/g, ' ') ?? '',
+      score.totalScore,
+      score.riskLevel,
+      (score.factors || []).map((f) => f.name).join('; '),
+    ])
+    exportCSV([hdrs, ...rows], `apps-${currentScan.tenantId}-${Date.now()}.csv`)
+  }
+
+  const handleExportCreds = () => {
+    const hdrs = ['App Name', 'Credential Name', 'Type', 'Severity', 'Expires In Days', 'Expiry Date']
+    const rows = filteredCreds.map((c) => [
+      c.appName, c.credentialName ?? '', c.credentialType, c.severity,
+      c.expiresInDays, formatDate(c.expiryDate),
+    ])
+    exportCSV([hdrs, ...rows], `credentials-${currentScan.tenantId}-${Date.now()}.csv`)
+  }
+
+  const exportHandler = activeTab === 'findings' ? handleExportFindings
+    : activeTab === 'apps'     ? handleExportApps
+    : handleExportCreds
 
   return (
     <div className="space-y-6">
@@ -100,24 +230,59 @@ export default function ScanDetail() {
         ))}
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 border-b pb-2">
-        {[
-          { id: 'findings' as Tab, label: `Shadow Findings (${findings.length})` },
-          { id: 'apps' as Tab, label: `Top Risky Apps (${topRisky.length})` },
-          { id: 'credentials' as Tab, label: `Credentials (${credFindings.length})` },
-        ].map((tab) => (
+      {/* Tabs + Export button */}
+      <div className="flex items-center gap-2 border-b pb-2">
+        <div className="flex gap-2 flex-1 flex-wrap">
+          {[
+            { id: 'findings' as Tab, label: `Shadow Findings (${findings.length})` },
+            { id: 'apps' as Tab, label: `Top Risky Apps (${topRisky.length})` },
+            { id: 'credentials' as Tab, label: `Credentials (${credFindings.length})` },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                'px-4 py-2 text-sm font-medium rounded-t-lg transition-colors',
+                activeTab === tab.id
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <Button variant="outline" size="sm" onClick={exportHandler}>
+          <Download className="h-3.5 w-3.5 mr-1.5" />
+          Export CSV
+        </Button>
+      </div>
+
+      {/* Severity filter chips */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <button
+          onClick={() => setSeverityFilter('')}
+          className={cn(
+            'px-3 py-1 text-xs font-medium rounded-full border transition-colors',
+            !severityFilter
+              ? 'bg-primary text-primary-foreground border-primary'
+              : 'border-border text-muted-foreground hover:text-foreground'
+          )}
+        >
+          All
+        </button>
+        {SEVERITY_CHIPS.map((s) => (
           <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            key={s}
+            onClick={() => setSeverityFilter(severityFilter === s ? '' : s)}
             className={cn(
-              'px-4 py-2 text-sm font-medium rounded-t-lg transition-colors',
-              activeTab === tab.id
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:text-foreground'
+              'px-3 py-1 text-xs font-medium rounded-full border capitalize transition-colors',
+              severityFilter === s
+                ? chipActive(s)
+                : 'border-border text-muted-foreground hover:text-foreground'
             )}
           >
-            {tab.label}
+            {s}
           </button>
         ))}
       </div>
@@ -133,13 +298,13 @@ export default function ScanDetail() {
         />
       </div>
 
-      {/* Tab Content */}
+      {/* ---- FINDINGS TAB ---- */}
       {activeTab === 'findings' && (
         <div className="space-y-3">
           {filteredFindings.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center text-muted-foreground">
-                {findings.length === 0 ? 'No shadow OAuth findings detected.' : 'No results match your search.'}
+                {findings.length === 0 ? 'No shadow OAuth findings detected.' : 'No results match your filters.'}
               </CardContent>
             </Card>
           ) : (
@@ -149,7 +314,7 @@ export default function ScanDetail() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.03 }}
-                className={cn('rounded-lg border p-4', severityColor(finding.severity))}
+                className={cn('rounded-lg border p-4', severityBorder(finding.severity))}
               >
                 <div className="flex items-start gap-3">
                   <AlertTriangle className={cn('h-4 w-4 mt-0.5 flex-shrink-0', getRiskColor(finding.severity))} />
@@ -173,6 +338,12 @@ export default function ScanDetail() {
                     {finding.affectedUserCount !== undefined && finding.affectedUserCount > 0 && (
                       <p className="text-xs text-muted-foreground mt-1">{finding.affectedUserCount} affected user(s)</p>
                     )}
+                    {finding.recommendation && (
+                      <div className="mt-3 flex items-start gap-2 rounded border border-primary/20 bg-primary/5 p-2.5">
+                        <Lightbulb className="h-3.5 w-3.5 mt-0.5 flex-shrink-0 text-primary" />
+                        <p className="text-xs text-muted-foreground">{finding.recommendation}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </motion.div>
@@ -181,11 +352,12 @@ export default function ScanDetail() {
         </div>
       )}
 
+      {/* ---- APPS TAB ---- */}
       {activeTab === 'apps' && (
         <div className="space-y-2">
           {filteredApps.length === 0 ? (
             <Card>
-              <CardContent className="py-12 text-center text-muted-foreground">No apps match your search.</CardContent>
+              <CardContent className="py-12 text-center text-muted-foreground">No apps match your filters.</CardContent>
             </Card>
           ) : (
             filteredApps.map(([sp, score], i) => (
@@ -246,12 +418,13 @@ export default function ScanDetail() {
         </div>
       )}
 
+      {/* ---- CREDENTIALS TAB ---- */}
       {activeTab === 'credentials' && (
         <div className="space-y-3">
           {filteredCreds.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center text-muted-foreground">
-                {credFindings.length === 0 ? 'No expiring or expired credentials found.' : 'No results match your search.'}
+                {credFindings.length === 0 ? 'No expiring or expired credentials found.' : 'No results match your filters.'}
               </CardContent>
             </Card>
           ) : (
@@ -261,7 +434,7 @@ export default function ScanDetail() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.03 }}
-                className={cn('rounded-lg border p-4', severityColor(cred.severity))}
+                className={cn('rounded-lg border p-4', severityBorder(cred.severity))}
               >
                 <div className="flex items-start gap-3">
                   <Key className={cn('h-4 w-4 mt-0.5 flex-shrink-0', getRiskColor(cred.severity))} />
